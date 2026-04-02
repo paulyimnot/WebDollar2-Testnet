@@ -16,6 +16,13 @@ async function migrate() {
   console.log("Checking for missing columns...");
   const client = await pool.connect();
   try {
+    // Fix NULL balances
+    await client.query(`
+      UPDATE users SET balance = '0' WHERE balance IS NULL;
+      UPDATE users SET staked_balance = '0' WHERE staked_balance IS NULL;
+      UPDATE wallet_addresses SET balance = '0' WHERE balance IS NULL;
+    `);
+
     // Add nonce to users if it doesn't exist
     await client.query(`
       DO $$
