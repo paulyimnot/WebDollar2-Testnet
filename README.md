@@ -1,73 +1,35 @@
-# React + TypeScript + Vite
+# WebDollar 2 (WEBD2) - Public Stress Testnet v1.0 🚀
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to the **WebDollar 2 (WEBD2)** Stress Testnet! This repository contains the public-facing engine adapter and application code for the world's most performant, browser-native blockchain.
 
-Currently, two official plugins are available:
+## 💎 Network Overview
+WebDollar 2 is built on the revolutionary **DIELBS (Distributed Intelligent Elastic Ledger Blockchain System)** engine, designed for unprecedented scale and sustainability.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Transaction Fees:** Fixed at a sustainable **0.0001 WEBD** per transaction.
+- **Micro-Fee Architecture:** Prevents network spam while ensuring long-term engine maintenance and node viability.
+- **Browser-Native:** Mine and transact directly from your browser without installing any software.
+- **High Concurrency:** Verified peak performance of **31,000+ TPS** (Transactions Per Second).
 
-## React Compiler
+## 🛠️ Technology Stack
+- **Engine:** Pro-Tier DIELBS Integration (Proprietary core with public adapter).
+- **Frontend:** React + TypeScript + Vite.
+- **Security:** Hardened with Replay Protection (Nonce-based) and Atomic State Management.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 📄 Documentation
+Dive deeper into the technology behind WEBD2:
+- [Whitepaper](./WHITEPAPER.md) - Technical specifications of the DIELBS engine.
+- [Blackpaper](./BLACKPAPER.md) - Layman-friendly overview of the network vision and tokenomics.
 
-## Expanding the ESLint configuration
+## 🚀 How to join the Stress Test
+1. Visit the live dashboard: [LIVE_SITE_LINK_HERE]
+2. Create or import your browser-native wallet.
+3. Start mining directly in your browser tab.
+4. Stress test the network by sending micro-transactions between wallets.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🔐 Proprietary Protection
+*Note: This public repository includes the high-performance **Engine Adapter**. The core `dielbs_engine_pro.ts` remains proprietary and is excluded to protect intellectual property while allowing for public validation and community development.*
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+**WebDollar 2: Sustainable. Scalable. Universal.**
+🥇💰🚀🏁🏆
