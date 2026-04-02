@@ -1,0 +1,1904 @@
+import type { Express, Request, Response, NextFunction } from "express";
+import type { Server } from "http";
+import { storage } from "./storage.js";
+import { api, helpChatInputSchema } from "../shared/routes.js";
+import { z } from "zod";
+import session from "express-session";
+import MemoryStore from "memorystore";
+import bcrypt from "bcrypt";
+import { generateWallet, encryptPrivateKey, deriveKeyPair } from "./crypto.js";
+import { createHash } from "crypto";
+import { checkConnection, getContractAddress, getOnChainBalance, getMaticBalance, getPolygonscanBaseUrl, getRecentBlocks, getRecentTransactionsFromBlock } from "./blockchain.js";
+import { db } from "./db.js";
+import { sql, eq } from "drizzle-orm";
+import { users } from "../shared/schema.js";
+import * as OTPAuth from "otpauth";
+import QRCode from "qrcode";
+import OpenAI from "openai";
+
+const SessionStore = MemoryStore(session);
+
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const faucetIpStamps = new Map<string, number>();
+
+function rateLimit(key: string, maxAttempts: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+  entry.count++;
+  return entry.count > maxAttempts;
+}
+
+function sanitizeUsername(input: string): string {
+  return input.toLowerCase().replace(/[^a-z0-9._-]/g, "").trim();
+}
+
+export async function registerRoutes(
+  httpServer: Server,
+  app: Express
+): Promise<Server> {
+
+  app.set("trust proxy", 1);
+
+  // 🛡️ SECURITY: ALLOW GAMING HUB ACCESS (CORS)
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    const allowed = ["https://wd2-casino.netlify.app", "https://wd2casino.netlify.app"];
+    if (origin && allowed.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
+  });
+
+  app.use(session({
+    secret: process.env.SESSION_SECRET || "dev_secret_webdollar2",
+    resave: false,
+    saveUninitialized: false,
+    name: 'wd2_session',
+    cookie: {
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days persistence
+      secure: process.env.NODE_ENV?.trim() === "production",
+      httpOnly: true,
+      sameSite: 'lax', // Lax is more compatible for cross-domain auth transitions
+    },
+    store: new SessionStore({ checkPeriod: 86400000 }),
+  }));
+
+  // === Auth Routes ===
+  // Persistent anti-Sybil protection relocated to DB (registration_ip_log)
+  
+  app.post(api.auth.register.path, async (req, res) => {
+    try {
+      const ip = req.ip || req.socket?.remoteAddress || "unknown_ip";
+      
+      // 0. GLOBAL IP BLACKLIST CHECK
+      const isBanned = await db.execute(sql`SELECT id FROM banned_ips WHERE ip = ${ip}`);
+      if (isBanned.rows.length > 0) {
+        return res.status(403).json({ message: "Network Access Denied: This IP Address has been permanently blacklisted for violation of Terms of Service." });
+      }
+
+      // 1. PERSISTENT IP LOCKOUT (Registration)
+      const existingIp = await db.execute(sql`SELECT id FROM registration_ip_log WHERE ip = ${ip}`);
+      if (existingIp.rows.length > 0 && ip !== "unknown_ip") {
+        return res.status(403).json({ message: "STRICT LIMIT: Only 1 primary WebDollar 2 wallet registration is permitted per household device framework. Please use your existing account!" });
+      }
+      if (rateLimit(`register:${ip}`, 3, 60000)) {
+        return res.status(429).json({ message: "Rate limit triggered. Stop immediately." });
+      }
+
+      const input = api.auth.register.input.parse(req.body);
+      const username = sanitizeUsername(input.username);
+
+      if (username.length < 3) {
+        return res.status(400).json({ message: "Username must be at least 3 characters (letters, numbers, _ - .)" });
+      }
+
+      const existing = await storage.getUserByUsername(username);
+      if (existing) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      if (input.password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      if (input.password.length > 128) {
+        return res.status(400).json({ message: "Password too long" });
+      }
+
+      const hashedPassword = await bcrypt.hash(input.password, 12);
+      const wallet = generateWallet();
+
+      const user = await storage.createUser({
+        username,
+        password: hashedPassword,
+        walletAddress: wallet.address,
+        polygonAddress: wallet.polygonAddress,
+        balance: "0",
+        isDev: false,
+        isFoundation: false,
+        nonce: 0
+      });
+
+      const encryptedKey = encryptPrivateKey(wallet.privateKey, input.password);
+      await storage.createWalletAddress({
+        userId: user.id,
+        label: "Primary Wallet",
+        address: wallet.address,
+        polygonAddress: wallet.polygonAddress,
+        publicKey: wallet.publicKey,
+        encryptedPrivateKey: encryptedKey,
+        mnemonic: wallet.mnemonic,
+        isPrimary: true,
+      });
+
+      // Secure device lock mapping against multi-account spam across DB reboots
+      if (ip !== "unknown_ip") {
+        await db.execute(sql`INSERT INTO registration_ip_log (ip) VALUES (${ip}) ON CONFLICT DO NOTHING`);
+      }
+       // @ts-ignore
+      req.session.userId = user.id;
+      const { password: _, ...safeUser } = user;
+      res.status(201).json(safeUser);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("Register error:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post(api.auth.login.path, async (req, res, next) => {
+    try {
+      const ip = req.ip || "unknown";
+      // 🛡️ REQ ID 10: Limit login to 3 attempts, 5 minute cooldown
+      if (rateLimit(`login:${ip}`, 3, 300000)) {
+        return res.status(429).json({ message: "Security Warning: Too many attempts. Access blocked for 5 minutes." });
+      }
+
+      const { username: rawUsername, password } = req.body;
+
+      if (!rawUsername || !password || typeof rawUsername !== "string" || typeof password !== "string") {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+
+      const username = sanitizeUsername(rawUsername);
+      const user = await storage.getUserByUsername(username);
+      console.log(`[LOGIN] Attempt for username: "${username}", user found: ${!!user}`);
+
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) {
+        console.log(`[LOGIN] Invalid password for user: "${username}"`);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      console.log(`[LOGIN] Password valid for "${username}", 2FA enabled: ${user.is2faEnabled}, has TOTP: ${!!user.totpSecret}`);
+
+      if (user.is2faEnabled && user.totpSecret) {
+        console.log(`[LOGIN] Requiring 2FA for "${username}"`);
+        // @ts-ignore
+        req.session.pending2FAUserId = user.id;
+        return res.status(200).json({ requires2FA: true, userId: user.id });
+      }
+
+      // @ts-ignore
+      req.session.userId = user.id;
+      console.log(`[LOGIN] Login successful for "${username}", session userId set to ${user.id}`);
+      const { password: _, totpSecret: _s, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (err) {
+      console.error("Login error:", err);
+      next(err);
+    }
+  });
+
+  app.post(api.auth.logout.path, (req, res) => {
+    req.session.destroy(() => {
+      res.json({ message: "Logged out" });
+    });
+  });
+
+  app.get(api.auth.me.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Not logged in" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+    const { password: _, totpSecret: _s, ...safeUser } = user;
+    res.json(safeUser);
+  });
+
+  // === Password Reset via Seed Phrase ===
+
+  app.post(api.auth.resetPassword.path, async (req, res) => {
+    const ip = req.ip || "unknown";
+    if (rateLimit(`reset:${ip}`, 5, 60000)) {
+      return res.status(429).json({ message: "Too many reset attempts. Try again in a minute." });
+    }
+
+    const { username: rawUsername, seedPhrase, newPassword } = req.body;
+
+    if (!rawUsername || !seedPhrase || !newPassword || typeof rawUsername !== "string") {
+      return res.status(400).json({ message: "Username, seed phrase, and new password are required" });
+    }
+
+    const username = sanitizeUsername(rawUsername);
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters" });
+    }
+
+    if (newPassword.length > 128) {
+      return res.status(400).json({ message: "Password too long" });
+    }
+
+    const user = await storage.getUserByUsername(username);
+    if (!user) {
+      return res.status(404).json({ message: "Account not found" });
+    }
+
+    const addresses = await storage.getWalletAddresses(user.id);
+    const primaryAddr = addresses.find(a => a.isPrimary);
+    if (!primaryAddr) {
+      return res.status(400).json({ message: "No wallet found for this account" });
+    }
+
+    const trimmedPhrase = seedPhrase.trim().toLowerCase();
+    const storedPhrase = (primaryAddr.mnemonic || "").trim().toLowerCase();
+
+    if (trimmedPhrase !== storedPhrase) {
+      return res.status(400).json({ message: "Seed phrase does not match. Please check and try again." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await storage.updateUserPassword(user.id, hashedPassword);
+
+    const keys = deriveKeyPair(trimmedPhrase);
+    const newEncKey = encryptPrivateKey(keys.privateKey, newPassword);
+    await storage.updateWalletAddress(primaryAddr.id, { encryptedPrivateKey: newEncKey });
+
+    res.json({ message: "Password reset successfully. You can now log in with your new password." });
+  });
+
+  // === Two-Factor Authentication (2FA) Routes ===
+
+  app.get(api.auth.twoFactor.status.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+    res.json({ enabled: !!user.is2faEnabled });
+  });
+
+  app.post(api.auth.twoFactor.setup.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    const ip = req.ip || "unknown";
+    if (rateLimit(`2fa-setup:${ip}`, 5, 60000)) {
+      return res.status(429).json({ message: "Too many requests. Try again in a minute." });
+    }
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+
+    const secret = new OTPAuth.Secret({ size: 20 });
+    const totp = new OTPAuth.TOTP({
+      issuer: "WebDollar2",
+      label: user.username,
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      secret: secret,
+    });
+
+    const otpauthUrl = totp.toString();
+    const qrCodeUrl = await QRCode.toDataURL(otpauthUrl);
+
+    await storage.updateUser2FA(user.id, secret.base32, false);
+
+    res.json({ qrCodeUrl, secret: secret.base32 });
+  });
+
+  app.post(api.auth.twoFactor.enable.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+
+    if (!user.totpSecret) {
+      return res.status(400).json({ message: "Please set up 2FA first by generating a QR code" });
+    }
+
+    const { code } = req.body;
+    if (!code || typeof code !== "string") {
+      return res.status(400).json({ message: "Verification code is required" });
+    }
+
+    const totp = new OTPAuth.TOTP({
+      issuer: "WebDollar2",
+      label: user.username,
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(user.totpSecret),
+    });
+
+    const expectedToken = totp.generate();
+    console.log(`[2FA Enable] User: ${user.username}, Code entered: ${code}, Expected: ${expectedToken}, Secret: ${user.totpSecret.substring(0, 4)}...`);
+
+    const delta = totp.validate({ token: code, window: 3 });
+    if (delta === null) {
+      return res.status(400).json({ message: "Invalid code. Make sure the time on your phone is set to automatic, then try the latest code from your authenticator app." });
+    }
+
+    await storage.updateUser2FA(user.id, user.totpSecret, true);
+    res.json({ message: "Two-factor authentication enabled successfully!" });
+  });
+
+  app.post(api.auth.twoFactor.disable.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+
+    const { code, password } = req.body;
+    if (!code || !password) {
+      return res.status(400).json({ message: "Verification code and password are required" });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ message: "Invalid password" });
+    }
+
+    if (user.totpSecret) {
+      const totp = new OTPAuth.TOTP({
+        issuer: "WebDollar2",
+        label: user.username,
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.Secret.fromBase32(user.totpSecret),
+      });
+
+      const delta = totp.validate({ token: code, window: 3 });
+      if (delta === null) {
+        return res.status(400).json({ message: "Invalid code. Make sure the time on your phone is set to automatic, then try the latest code from your authenticator app." });
+      }
+    }
+
+    await storage.updateUser2FA(user.id, null, false);
+    res.json({ message: "Two-factor authentication has been disabled." });
+  });
+
+  app.post(api.auth.twoFactor.verify.path, async (req, res) => {
+    const { userId, code } = req.body;
+    if (!userId || !code) {
+      return res.status(400).json({ message: "Verification code is required" });
+    }
+
+    // @ts-ignore
+    const pendingUserId = req.session.pending2FAUserId;
+    if (!pendingUserId || pendingUserId !== userId) {
+      return res.status(401).json({ message: "No pending 2FA challenge. Please log in again." });
+    }
+
+    const ip = req.ip || "unknown";
+    if (rateLimit(`2fa:${ip}`, 5, 60000)) {
+      return res.status(429).json({ message: "Too many verification attempts. Try again in a minute." });
+    }
+    if (rateLimit(`2fa:user:${userId}`, 5, 60000)) {
+      return res.status(429).json({ message: "Too many verification attempts for this account. Try again in a minute." });
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user || !user.totpSecret || !user.is2faEnabled) {
+      return res.status(401).json({ message: "Invalid request" });
+    }
+
+    const totp = new OTPAuth.TOTP({
+      issuer: "WebDollar2",
+      label: user.username,
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(user.totpSecret),
+    });
+
+    const expectedToken = totp.generate();
+    console.log(`[2FA Verify Login] User: ${user.username}, Code entered: ${code}, Expected: ${expectedToken}`);
+
+    const delta = totp.validate({ token: code, window: 3 });
+    if (delta === null) {
+      return res.status(401).json({ message: "Invalid code. Make sure the time on your phone is set to automatic, then try the latest code from your authenticator app." });
+    }
+
+    // @ts-ignore
+    delete req.session.pending2FAUserId;
+    // @ts-ignore
+    req.session.userId = user.id;
+    const { password: _, totpSecret: _s, ...safeUser } = user;
+    res.json(safeUser);
+  });
+
+  // === Alias Resolution ===
+
+  app.get('/api/alias/resolve/:username', async (req, res) => {
+    const { username } = req.params;
+    
+    // First try resolving by explicitly set active custom alias
+    let user = await storage.getUserByAlias(username);
+    
+    // Fallback to legacy username resolution if not found via custom alias
+    // Wait, requirement: if alias functionality is active, username is disconnected from receiving?
+    // Actually, let's keep it simple: if you have an ACTIVE custom alias, we resolve that.
+    if (!user || !user.isAliasActive) {
+       // Only resolve by username if it doesn't match a custom active alias somewhere and if username lookup doesn't have custom alias overriding it?
+       // Let's just lookup by username as fallback for backward compatibility
+       user = await storage.getUserByUsername(username);
+       // If the user has a custom alias active, maybe we don't resolve username? 
+       // The user request says "for secutrity we should not allow user name to be same as alisa". 
+       // We'll allow routing to either their primary username or their active alias.
+    }
+
+    if (!user || (!user.walletAddress && (!user.isAliasActive || user.alias !== username))) {
+      return res.status(404).json({ message: "Alias not found or has no primary address" });
+    }
+    res.json({ address: user.walletAddress, username: user.alias || user.username });
+  });
+
+  app.post('/api/alias/update', async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+
+    const { alias, isAliasActive } = req.body;
+    
+    let sanitizedAlias = null;
+    
+    if (alias) {
+      // REQUIREMENT: Enforce "@WEBD2" suffix and capitalization
+      // Input can be "Sample" or "Sample@WEBD2"
+      let basePart = alias.trim();
+      if (basePart.toLowerCase().endsWith("@webd2")) {
+        basePart = basePart.substring(0, basePart.length - 6).trim();
+      }
+
+      // Case-sensitive part (as requested "the rest should remain case sensetive")
+      // BUT for routing we usually want lowercase for uniqueness checks. 
+      // User says "the rest should remain case sensetive", so we store it as is but check uniqueness lowercased.
+      const rawAlias = basePart;
+      const lowerAlias = basePart.toLowerCase();
+
+      if (lowerAlias === user.username.toLowerCase()) {
+        return res.status(400).json({ message: "For security, your alias cannot be the same as your username." });
+      }
+      
+      if (lowerAlias.length < 3) {
+        return res.status(400).json({ message: "Alias must be at least 3 characters." });
+      }
+
+      // Final alias format: Sample@WEBD2
+      sanitizedAlias = `${rawAlias}@WEBD2`;
+      
+      const existing = await storage.getUserByAlias(sanitizedAlias);
+      if (existing && existing.id !== user.id) {
+         return res.status(400).json({ message: "This alias is already taken by someone else." });
+      }
+      
+      // Also check if anyone else has this as a base username (case insensitive)
+      const existingUsername = await storage.getUserByUsername(lowerAlias);
+      if (existingUsername && existingUsername.id !== user.id) {
+         return res.status(400).json({ message: "This alias base is already registered as a username. Choose something unique." });
+      }
+    }
+
+    const updated = await storage.updateUserAlias(user.id, sanitizedAlias, isAliasActive);
+    const { password: _, totpSecret: _s, ...safeUser } = updated;
+    res.json(safeUser);
+  });
+
+  // === Wallet Address Management ===
+
+  app.get(api.wallet.addresses.list.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const addresses = await storage.getWalletAddresses(req.session.userId);
+    const safe = addresses.map(a => ({ ...a, encryptedPrivateKey: "[ENCRYPTED]", mnemonic: "[HIDDEN]", polygonAddress: a.polygonAddress }));
+    res.json(safe);
+  });
+
+  app.post(api.wallet.addresses.create.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const label = req.body.label || "New Wallet";
+    const wallet = generateWallet();
+    const encryptedKey = encryptPrivateKey(wallet.privateKey, "default_enc");
+
+    const addr = await storage.createWalletAddress({
+      // @ts-ignore
+      userId: req.session.userId,
+      label,
+      address: wallet.address,
+      polygonAddress: wallet.polygonAddress,
+      publicKey: wallet.publicKey,
+      encryptedPrivateKey: encryptedKey,
+      mnemonic: wallet.mnemonic,
+      isPrimary: false,
+    });
+
+    res.status(201).json({ ...addr, encryptedPrivateKey: "[ENCRYPTED]", mnemonic: "[HIDDEN]" });
+  });
+
+  app.get("/api/wallet/addresses/:id/phrase", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const addr = await storage.getWalletAddress(Number(req.params.id));
+    // @ts-ignore
+    if (!addr || addr.userId !== req.session.userId) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+
+    if (addr.isLocked) {
+      return res.status(400).json({ message: "Address is locked. Unlock it first." });
+    }
+
+    res.json({ mnemonic: addr.mnemonic, address: addr.address, publicKey: addr.publicKey });
+  });
+
+  app.patch("/api/wallet/addresses/:id/lock", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    const addr = await storage.getWalletAddress(Number(req.params.id));
+    // @ts-ignore
+    if (!addr || addr.userId !== req.session.userId) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+    const updated = await storage.updateWalletAddress(addr.id, { isLocked: true });
+    res.json({ ...updated, encryptedPrivateKey: "[ENCRYPTED]", mnemonic: "[HIDDEN]" });
+  });
+
+  app.patch("/api/wallet/addresses/:id/unlock", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    const addr = await storage.getWalletAddress(Number(req.params.id));
+    // @ts-ignore
+    if (!addr || addr.userId !== req.session.userId) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+    const updated = await storage.updateWalletAddress(addr.id, { isLocked: false });
+    res.json({ ...updated, encryptedPrivateKey: "[ENCRYPTED]", mnemonic: "[HIDDEN]" });
+  });
+
+  app.delete("/api/wallet/addresses/:id", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    const addr = await storage.getWalletAddress(Number(req.params.id));
+    // @ts-ignore
+    if (!addr || addr.userId !== req.session.userId) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+    if (addr.isPrimary) {
+      return res.status(400).json({ message: "Cannot delete primary wallet address" });
+    }
+    if (Number(addr.balance) > 0) {
+      return res.status(400).json({ message: "Cannot delete address with a positive balance. Transfer funds first." });
+    }
+    await storage.deleteWalletAddress(addr.id);
+    res.json({ message: "Address deleted" });
+  });
+
+  // === Wallet Routes ===
+
+  app.get(api.wallet.get.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const userId = req.session.userId;
+    const user = await storage.getUser(userId);
+
+    // 🛡️ SELF-HEALING: Ensure user always has a primary wallet address
+    const addresses = await storage.getWalletAddresses(userId);
+    if (addresses.length === 0) {
+      console.log(`[Self-Healing] User ${user?.username} has no wallet addresses. Creating primary...`);
+      const wallet = generateWallet();
+      const encryptedKey = encryptPrivateKey(wallet.privateKey, "default_enc"); // In a real production this should be based on login secret
+      
+      const addr = await storage.createWalletAddress({
+        userId,
+        label: "Primary Wallet",
+        address: wallet.address,
+        polygonAddress: wallet.polygonAddress,
+        publicKey: wallet.publicKey,
+        encryptedPrivateKey: encryptedKey,
+        mnemonic: wallet.mnemonic,
+        isPrimary: true,
+      });
+
+      // Update user's primary walletAddress if not set
+      if (user && !user.walletAddress) {
+        await storage.updateUserStake(user.id, user.stakedBalance || "0", user.balance || "0", user.lastStakeRewardClaim);
+        // We need a more direct update for walletAddress but updateUserStake doesn't do it.
+        // I'll add a database update directly.
+        await db.update(users).set({ walletAddress: wallet.address }).where(eq(users.id, userId));
+      }
+      
+      // Re-fetch user to get the updated wallet information
+      const updatedUser = await storage.getUser(userId);
+      const { password: _, ...safeUser } = updatedUser!;
+      return res.json(safeUser);
+    }
+
+    const { password: _, ...safeUser } = user!;
+    res.json(safeUser);
+  });
+
+  app.post(api.wallet.transfer.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const { recipientAddress, amount } = req.body;
+
+    if (!recipientAddress || typeof recipientAddress !== "string" || recipientAddress.trim().length < 5) {
+      return res.status(400).json({ message: "Valid recipient address is required" });
+    }
+
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+
+    if (amountNum > 999999999999) {
+      return res.status(400).json({ message: "Amount too large" });
+    }
+
+    // @ts-ignore
+    const sender = await storage.getUser(req.session.userId);
+    if (!sender) return res.status(401).json({ message: "User not found" });
+
+    if (sender.walletAddress === recipientAddress.trim()) {
+      return res.status(400).json({ message: "Cannot transfer to yourself" });
+    }
+
+    const recipientWalletAddr = await storage.getWalletAddressByAddress(recipientAddress.trim());
+    if (!recipientWalletAddr) {
+      return res.status(400).json({ message: "Recipient wallet address not found on the network" });
+    }
+
+    const recipient = await storage.getUser(recipientWalletAddr.userId);
+    if (!recipient) {
+      return res.status(400).json({ message: "Recipient account not found" });
+    }
+
+    if (parseFloat(sender.balance!) < amountNum) {
+      return res.status(400).json({ message: "Insufficient balance" });
+    }
+
+    const senderWalletAddr = await storage.getWalletAddressByAddress(sender.walletAddress!);
+    const senderAddrId = senderWalletAddr ? senderWalletAddr.id : null;
+
+    try {
+      const tx = await storage.executeTransfer(
+        sender.id,
+        recipient.id,
+        senderAddrId,
+        recipientWalletAddr.id,
+        amountNum,
+        sender.walletAddress!,
+        recipientAddress.trim()
+      );
+
+      // 🛡️ REPLAY PROTECTION: Increment sender nonce in DB
+      await storage.updateWalletBalance(sender.walletAddress!, 0n, (sender.nonce || 0) + 1);
+
+      res.json(tx);
+    } catch (err: any) {
+      return res.status(400).json({ message: err.message || "Transfer failed" });
+    }
+  });
+
+  // Private transactions use the same transfer logic but are not publicly visible in the explorer
+  app.post("/api/wallet/transfer/private", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const { recipientAddress, amount } = req.body;
+    if (!recipientAddress || !amount) {
+      return res.status(400).json({ message: "Recipient and amount are required" });
+    }
+
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+
+    // @ts-ignore
+    const sender = await storage.getUser(req.session.userId);
+    if (!sender) return res.status(401).json({ message: "User not found" });
+
+    const recipientWalletAddr = await storage.getWalletAddressByAddress(recipientAddress.trim());
+    if (!recipientWalletAddr) {
+      return res.status(400).json({ message: "Recipient address not found on the network" });
+    }
+
+    const recipient = await storage.getUser(recipientWalletAddr.userId);
+    if (!recipient) {
+      return res.status(400).json({ message: "Recipient account not found" });
+    }
+
+    if (parseFloat(sender.balance!) < amountNum) {
+      return res.status(400).json({ message: "Insufficient balance" });
+    }
+
+    const senderWalletAddr = await storage.getWalletAddressByAddress(sender.walletAddress!);
+    const senderAddrId = senderWalletAddr ? senderWalletAddr.id : null;
+
+    try {
+      const tx = await storage.executeTransfer(
+        sender.id,
+        recipient.id,
+        senderAddrId,
+        recipientWalletAddr.id,
+        amountNum,
+        sender.walletAddress!,
+        recipientAddress.trim()
+      );
+      // Mark as private — addresses are masked in the response
+      res.json({
+        ...tx,
+        isPrivate: true,
+        senderAddress: (tx.senderAddress && tx.senderAddress !== "FAUCET_TESTNET" && !tx.senderAddress.startsWith("SYSTEM_")) ? tx.senderAddress.substring(0, 8) + "..." : tx.senderAddress,
+        receiverAddress: (tx.receiverAddress && !tx.receiverAddress.startsWith("SYSTEM_")) ? tx.receiverAddress.substring(0, 8) + "..." : tx.receiverAddress,
+      });
+    } catch (err: any) {
+      return res.status(400).json({ message: err.message || "Private transfer failed" });
+    }
+  });
+
+  // === Testnet Faucet ===
+  // Persistent 24h cooldown relocated to DB (faucet_claim_log)
+   app.post("/api/wallet/testnet-faucet", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });    try {
+      const clientIp = req.ip || req.socket?.remoteAddress || "unknown_ip";
+      
+      // 0. GLOBAL IP BLACKLIST CHECK
+      const isBanned = await db.execute(sql`SELECT id FROM banned_ips WHERE ip = ${clientIp}`);
+      if (isBanned.rows.length > 0) {
+        return res.status(403).json({ message: "Access Denied: IP Blacklisted." });
+      }
+
+      // 1. PERSISTENT IP LOCKOUT (Faucet)
+      const existingClaim = await db.execute(sql`SELECT last_claim_at FROM faucet_claim_log WHERE ip = ${clientIp}`);
+      if (existingClaim.rows.length > 0) {
+          const lastClaim = new Date(existingClaim.rows[0].last_claim_at as string).getTime();
+          if (Date.now() - lastClaim < 24 * 60 * 60 * 1000) {
+             return res.status(429).json({ message: "Network Limit: Your IP address has already claimed the Faucet today. Strict 1 claim per household router or device allows." });
+          }
+      }
+        // @ts-ignore
+      const user = await storage.getUser(req.session.userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      // Check 24 hour limit via database transactions
+      const userTxs = await storage.getUserTransactions(user.id);
+      const lastClaim = userTxs.find(tx => tx.senderAddress === "FAUCET_TESTNET");
+      if (lastClaim && lastClaim.timestamp) {
+        const hours24Ago = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        if (new Date(lastClaim.timestamp) > hours24Ago) {
+          return res.status(429).json({ message: "You can only claim the Testnet Faucet once every 24 hours!" });
+        }
+      }
+
+      const addedAmount = 10000;
+      const currentBalance = parseFloat(user.balance || "0");
+      // Balance update deferred to sync with primary wallet below
+      const newBalance = (currentBalance + addedAmount).toFixed(4);
+      
+      // Log persistent IP timestamp for 24h lockout
+      if (clientIp !== "unknown_ip") {
+          await db.execute(sql`
+            INSERT INTO faucet_claim_log (ip, wallet_address, last_claim_at) 
+            VALUES (${clientIp}, ${user.walletAddress || "N/A"}, NOW())
+            ON CONFLICT (ip) DO UPDATE SET last_claim_at = NOW()
+          `);
+      }
+      
+      // specifically add to their primary wallet address balance as well
+      const primaryAddrQuery = await storage.getWalletAddresses(user.id);
+      const primaryAddr = primaryAddrQuery.find(a => a.isPrimary);
+      if (primaryAddr) {
+        const addrCurrent = parseFloat(primaryAddr.balance || "0");
+        const newAddrBalance = (addrCurrent + addedAmount).toFixed(4);
+        await storage.updateWalletAddressBalance(primaryAddr.id, newAddrBalance);
+        
+        // Also update the global user balance to match
+        await storage.updateUserBalance(user.id, newAddrBalance);
+      } else {
+        // Fallback if no primary address (rare)
+        await storage.updateUserBalance(user.id, (parseFloat(user.balance || "0") + addedAmount).toFixed(4));
+      }
+
+      await storage.createTransaction({
+        senderId: null,
+        receiverId: user.id,
+        senderAddress: "FAUCET_TESTNET",
+        receiverAddress: user.walletAddress,
+        amount: addedAmount.toFixed(4),
+        type: "mining_reward", 
+        blockId: null
+      });
+
+      // Secure IP cache to stop multi-tab/browser abuse
+      faucetIpStamps.set(clientIp, Date.now());
+
+      res.json({ success: true, amount: addedAmount });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ message: "Faucet failed" });
+    }
+  });
+
+  // === User Transaction History ===
+
+  app.get(api.transactions.mine.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const txs = await storage.getUserTransactions(req.session.userId);
+    res.json(txs);
+  });
+
+  // === Proof-of-Stake Staking Routes ===
+
+  const STAKING_REWARD_RATE = 550; // 550 WEBD per 30 seconds distributed among all stakers (~100 year supply)
+  const REWARD_INTERVAL_SECONDS = 30;
+  const MIN_STAKE_AMOUNT = 1000;
+  const MIN_CLAIM_INTERVAL_MS = 30000; // 30 seconds minimum between claims
+
+  function sha256Hex(input: string): string {
+    return createHash("sha256").update(input).digest("hex");
+  }
+
+  function calculatePendingRewards(userStaked: number, totalNetworkStaked: number, lastClaimTime: Date | null): number {
+    if (userStaked <= 0 || totalNetworkStaked <= 0) return 0;
+    const now = Date.now();
+    const lastClaim = lastClaimTime ? lastClaimTime.getTime() : now;
+    const elapsedSeconds = Math.max(0, (now - lastClaim) / 1000);
+    const rewardPeriods = elapsedSeconds / REWARD_INTERVAL_SECONDS;
+    const userShare = userStaked / totalNetworkStaked;
+    return userShare * STAKING_REWARD_RATE * rewardPeriods;
+  }
+
+  function calculateAPY(totalNetworkStaked: number): number {
+    if (totalNetworkStaked <= 0) return 0;
+    const rewardsPerYear = STAKING_REWARD_RATE * (365 * 24 * 3600 / REWARD_INTERVAL_SECONDS);
+    const apy = (rewardsPerYear / totalNetworkStaked) * 100;
+    return Math.min(apy, 99999);
+  }
+
+  app.get(api.staking.info.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const totalNetworkStaked = await storage.getTotalNetworkStaked();
+    const totalStakedNum = parseFloat(totalNetworkStaked);
+    let userStaked = parseFloat(user.stakedBalance || "0");
+
+    // === 7-Day Hold Auto-Release Check ===
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    let stakingStoppedAt = user.stakingStoppedAt ? new Date(user.stakingStoppedAt).getTime() : null;
+    let holdRemainingMs = 0;
+    let isOnHold = false;
+
+    if (stakingStoppedAt && userStaked > 0) {
+      const elapsed = Date.now() - stakingStoppedAt;
+      if (elapsed >= SEVEN_DAYS_MS) {
+        // Auto-release: 7 days passed, return staked funds to balance
+        const availableBalance = parseFloat(user.balance || "0");
+        const newBalance = (availableBalance + userStaked).toFixed(4);
+        await storage.updateUserStake(user.id, "0", newBalance, null);
+        // @ts-ignore
+        await db.update(users).set({ stakingStoppedAt: null }).where(eq(users.id, user.id));
+
+        const minerWalletAddr = await storage.getWalletAddressByAddress(user.walletAddress!);
+        if (minerWalletAddr) {
+          const addrBal = parseFloat(minerWalletAddr.balance || "0");
+          await storage.updateWalletAddressBalance(minerWalletAddr.id, (addrBal + userStaked).toFixed(4));
+        }
+
+        // Re-fetch user after release
+        const updatedUser = await storage.getUser(user.id);
+        const latestBlock = await storage.getLatestBlock();
+        const blocksList = await storage.getBlocks(1000);
+        const totalMined = blocksList.reduce((sum: number, b: any) => sum + parseFloat(b.reward || "0"), 0);
+        return res.json({
+          stakedBalance: "0",
+          pendingRewards: "0",
+          apy: 0,
+          totalNetworkStaked: (totalStakedNum - userStaked).toFixed(4),
+          blockHeight: latestBlock?.id || 0,
+          circulatingSupply: (totalMined + 6800000000 + 3400000000).toFixed(4),
+          stakingStoppedAt: null,
+          holdRemainingMs: 0,
+          isOnHold: false,
+          totalRewardsEarned: "0",
+        });
+      } else {
+        holdRemainingMs = SEVEN_DAYS_MS - elapsed;
+        isOnHold = true;
+      }
+    }
+
+    // === Auto-Claim Rewards ===
+    let pendingRewards = 0;
+    if (userStaked > 0 && !isOnHold) {
+      pendingRewards = calculatePendingRewards(userStaked, totalStakedNum, user.lastStakeRewardClaim);
+
+      // Auto-claim if rewards exceed threshold
+      if (pendingRewards > 0.0001) {
+        // ALWAYS fetch the absolute latest user data before auto-claiming to avoid race conditions
+        const latestUser = await storage.getUser(user.id);
+        if (latestUser) {
+          const latestStaked = parseFloat(latestUser.stakedBalance || "0");
+          const availableBalance = parseFloat(latestUser.balance || "0");
+          const newBalance = (availableBalance + pendingRewards).toFixed(4);
+          
+          // Use latestStaked to ensure we don't overwrite a concurrent stake increase
+          await storage.updateUserStake(latestUser.id, latestStaked.toFixed(4), newBalance, new Date());
+
+          const minerWalletAddr = await storage.getWalletAddressByAddress(latestUser.walletAddress!);
+          if (minerWalletAddr) {
+            const addrBal = parseFloat(minerWalletAddr.balance || "0");
+            await storage.updateWalletAddressBalance(minerWalletAddr.id, (addrBal + pendingRewards).toFixed(4));
+          }
+
+          await storage.createTransaction({
+            senderId: null,
+            receiverId: latestUser.id,
+            senderAddress: "SYSTEM_REWARD",
+            receiverAddress: latestUser.walletAddress,
+            amount: pendingRewards.toFixed(4),
+            type: "staking_reward",
+            blockId: null,
+          });
+          
+          // Use the refreshed staked value for the response
+          userStaked = latestStaked;
+        }
+      }
+    }
+
+    const apy = calculateAPY(totalStakedNum);
+    const latestBlock = await storage.getLatestBlock();
+    const blocksList = await storage.getBlocks(1000);
+    const totalMined = blocksList.reduce((sum: number, b: any) => sum + parseFloat(b.reward || "0"), 0);
+
+    // Calculate total rewards ever earned by this user
+    const userTxs = await storage.getUserTransactions(user.id);
+    const rewardTxs = userTxs.filter((tx: any) => (tx.type === "staking_reward" || tx.type === "mining_reward") && tx.receiverId === user.id);
+    const totalRewardsEarned = rewardTxs.reduce((sum: number, tx: any) => sum + parseFloat(tx.amount || "0"), 0);
+    const lastRewardAmount = rewardTxs.length > 0 ? parseFloat(rewardTxs[rewardTxs.length - 1].amount || "0") : 0;
+    const rewardsCount = rewardTxs.length;
+
+    res.json({
+      stakedBalance: userStaked.toFixed(4),
+      pendingRewards: "0", // Always 0 since we auto-claim
+      apy: Math.round(apy * 100) / 100,
+      totalNetworkStaked: totalStakedNum.toFixed(4),
+      blockHeight: latestBlock?.id || 0,
+      circulatingSupply: (totalMined + 6800000000 + 3400000000).toFixed(4),
+      stakingStoppedAt: stakingStoppedAt ? new Date(stakingStoppedAt).toISOString() : null,
+      holdRemainingMs,
+      isOnHold,
+      totalRewardsEarned: totalRewardsEarned.toFixed(4),
+      lastRewardAmount: lastRewardAmount.toFixed(4),
+      rewardsCount,
+    });
+  });
+
+  app.get(api.staking.networkStats.path, async (req, res) => {
+    const totalStaked = await storage.getTotalNetworkStaked();
+    const totalStakers = await storage.getTotalStakers();
+    const latestBlock = await storage.getLatestBlock();
+
+    res.json({
+      totalStaked,
+      totalStakers,
+      blockHeight: latestBlock?.id || 0,
+      rewardRate: `${STAKING_REWARD_RATE} WEBD / ${REWARD_INTERVAL_SECONDS}s`,
+    });
+  });
+
+  app.post(api.staking.stake.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Block starting if user is on 7-day hold
+    if (user.stakingStoppedAt) {
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+      const elapsed = Date.now() - new Date(user.stakingStoppedAt).getTime();
+      if (elapsed < SEVEN_DAYS_MS) {
+        return res.status(400).json({ message: "Your previous stake is on a 7-day hold. Please wait until the hold period expires." });
+      }
+      // Hold expired, clear it
+      // @ts-ignore
+      await db.update(users).set({ stakingStoppedAt: null }).where(eq(users.id, user.id));
+    }
+
+    const { amount } = req.body;
+    const stakeAmount = parseFloat(amount);
+    if (isNaN(stakeAmount) || stakeAmount < MIN_STAKE_AMOUNT) {
+      return res.status(400).json({ message: `Minimum stake amount is ${MIN_STAKE_AMOUNT} WEBD` });
+    }
+
+    const availableBalance = parseFloat(user.balance || "0");
+    if (stakeAmount > availableBalance) {
+      return res.status(400).json({ message: "Insufficient balance to stake" });
+    }
+
+    const currentStaked = parseFloat(user.stakedBalance || "0");
+    const newBalance = (availableBalance - stakeAmount).toFixed(4);
+    const newStakedBalance = (currentStaked + stakeAmount).toFixed(4);
+
+    await storage.updateUserStake(user.id, newStakedBalance, newBalance, new Date());
+    
+    // Create a transaction record for the stake
+    await storage.createTransaction({
+      senderId: user.id,
+      receiverId: null,
+      senderAddress: user.walletAddress,
+      receiverAddress: "STAKING_CONTRACT",
+      amount: stakeAmount.toFixed(4),
+      type: "transfer", // Using transfer as it's a movement to stake
+      blockId: null
+    });
+
+    const minerWalletAddr = await storage.getWalletAddressByAddress(user.walletAddress!);
+    if (minerWalletAddr) {
+      const addrBalance = parseFloat(minerWalletAddr.balance || "0");
+      const newAddrBalance = Math.max(0, addrBalance - stakeAmount).toFixed(4);
+      await storage.updateWalletAddressBalance(minerWalletAddr.id, newAddrBalance);
+    }
+
+    res.json({
+      success: true,
+      stakedBalance: newStakedBalance,
+      message: `Successfully staked ${stakeAmount.toFixed(4)} WEBD. Mining is now ACTIVE.`,
+    });
+  });
+
+  // STOP MINING — triggers 7-day hold, does NOT return funds immediately
+  app.post(api.staking.unstake.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const currentStaked = parseFloat(user.stakedBalance || "0");
+    if (currentStaked <= 0) {
+      return res.status(400).json({ message: "No active stake to stop" });
+    }
+
+    // Already on hold?
+    if (user.stakingStoppedAt) {
+      return res.status(400).json({ message: "Mining is already stopped. Your funds are on a 7-day hold." });
+    }
+
+    // Set the stopped timestamp — funds remain locked for 7 days
+    // @ts-ignore
+    await db.update(users).set({ stakingStoppedAt: new Date() }).where(eq(users.id, user.id));
+
+    res.json({
+      success: true,
+      stakedBalance: currentStaked.toFixed(4),
+      message: `Mining stopped. Your ${currentStaked.toFixed(4)} WEBD will be held for 7 days before being returned to your balance.`,
+    });
+  });
+
+  // CHANGE STAKING AMOUNT (does NOT trigger 7-day hold — only active miners)
+  app.post('/api/staking/change-amount', async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.stakingStoppedAt) {
+      return res.status(400).json({ message: "Cannot change amount while on hold. Wait for the 7-day hold to expire." });
+    }
+
+    const { amount } = req.body;
+    const newStakeAmount = parseFloat(amount);
+    if (isNaN(newStakeAmount) || newStakeAmount < MIN_STAKE_AMOUNT) {
+      return res.status(400).json({ message: `Minimum stake amount is ${MIN_STAKE_AMOUNT} WEBD` });
+    }
+
+    const currentStaked = parseFloat(user.stakedBalance || "0");
+    const availableBalance = parseFloat(user.balance || "0");
+    const totalFunds = currentStaked + availableBalance;
+
+    if (newStakeAmount > totalFunds + 0.0001) {
+      return res.status(400).json({ message: "Insufficient total funds to change to this amount" });
+    }
+
+    const difference = newStakeAmount - currentStaked;
+    const newBalance = (availableBalance - difference).toFixed(4);
+
+    await storage.updateUserStake(user.id, newStakeAmount.toFixed(4), newBalance, new Date());
+
+    const minerWalletAddr = await storage.getWalletAddressByAddress(user.walletAddress!);
+    if (minerWalletAddr) {
+      const addrBal = parseFloat(minerWalletAddr.balance || "0");
+      await storage.updateWalletAddressBalance(minerWalletAddr.id, (addrBal - difference).toFixed(4));
+    }
+
+    res.json({
+      success: true,
+      stakedBalance: newStakeAmount.toFixed(4),
+      message: `Staking amount changed to ${newStakeAmount.toFixed(4)} WEBD.`,
+    });
+  });
+
+  // Keep claim route for backward compatibility but it's now a no-op
+  app.post(api.staking.claimRewards.path, async (req, res) => {
+    res.json({ success: true, reward: "0", message: "Rewards are now auto-claimed to your balance." });
+  });
+
+  // === Burn Address Balance Monitor ===
+
+  const BURN_ADDRESS = "WEBD$gDW@gHS1o$4sjBxKE7dY$fqTHwa+xj2Fjf$";
+  let cachedBurnBalance: { balance: string; lastFetched: number } = { balance: "0", lastFetched: 0 };
+  const BURN_CACHE_TTL = 60000;
+
+  async function fetchBurnAddressBalance(): Promise<string> {
+    const now = Date.now();
+    if (now - cachedBurnBalance.lastFetched < BURN_CACHE_TTL) {
+      return cachedBurnBalance.balance;
+    }
+    try {
+      const encoded = encodeURIComponent(BURN_ADDRESS).replace(/%40/g, '@').replace(/%2B/g, '+');
+      const url = `https://webdollar.network/address/${encoded}`;
+      const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (!response.ok) {
+        console.error("Burn balance fetch failed with status:", response.status);
+        return cachedBurnBalance.balance;
+      }
+      const html = await response.text();
+      const balanceMatch = html.match(/<td>Balance<\/td>\s*<td>\s*<button[^>]*>([0-9,.]+)<\/button>/);
+      if (balanceMatch) {
+        const balance = balanceMatch[1].replace(/,/g, '');
+        cachedBurnBalance = { balance, lastFetched: now };
+        return balance;
+      }
+      return cachedBurnBalance.balance;
+    } catch (err) {
+      console.error("Failed to fetch burn address balance:", err);
+      return cachedBurnBalance.balance;
+    }
+  }
+
+  app.get("/api/conversion/burn-balance", async (_req, res) => {
+    const balance = await fetchBurnAddressBalance();
+    res.json({
+      address: BURN_ADDRESS,
+      balance,
+      explorerUrl: `https://webdollar.network/address/${encodeURIComponent(BURN_ADDRESS).replace(/%40/g, '@').replace(/%2B/g, '+')}`,
+    });
+  });
+
+  // === Conversion Routes ===
+
+  app.post(api.conversion.create.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    try {
+      const input = api.conversion.create.input.parse(req.body);
+      const amount = parseFloat(input.amountClaimed);
+
+      if (isNaN(amount) || amount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+
+      if (amount > 42000000000) {
+        return res.status(400).json({ message: "Amount exceeds maximum possible legacy supply" });
+      }
+
+      const oldAddr = input.oldWalletAddress.trim();
+      if (oldAddr.length < 10 || oldAddr.length > 128) {
+        return res.status(400).json({ message: "Invalid legacy wallet address format" });
+      }
+
+      const isBlocked = await storage.isWalletBlocked(oldAddr);
+      if (isBlocked) {
+        return res.status(400).json({ message: "This wallet address has been blocked from conversion (old dev wallet)." });
+      }
+
+      const KNOWN_DEV_WALLETS = [
+        "WEBD$gBzj#R3RYPqi@2xS8LHN+mKGSMaP$VXKN3$",
+        "WEBD$gDZwp8rQBhKFLQCcoV4BLUJka+P&SfNn#q5n$",
+        "WEBD$gAkxes3YRPNxwi0q&N1fz@GJgg&ypILn4GnZ$",
+      ];
+      if (KNOWN_DEV_WALLETS.includes(oldAddr)) {
+        return res.status(400).json({ message: "This address belongs to a known legacy dev wallet and is blocked from conversion." });
+      }
+
+      const totalConvertedFromThisAddress = await storage.getTotalConvertedFromAddress(oldAddr);
+      const previousConversions = await storage.getConversionsByOldAddress(oldAddr);
+
+      if (previousConversions.length > 0) {
+        const originalClaimed = parseFloat(previousConversions[0].amountClaimed || "0");
+        const alreadyConverted = totalConvertedFromThisAddress;
+        const remainingOnAddress = originalClaimed - alreadyConverted;
+
+        if (remainingOnAddress <= 0) {
+          return res.status(400).json({
+            message: `This legacy address has already fully converted its ${originalClaimed.toLocaleString()} WEBD balance. No remaining funds to convert.`
+          });
+        }
+
+        if (amount > remainingOnAddress) {
+          return res.status(400).json({
+            message: `This address originally claimed ${originalClaimed.toLocaleString()} WEBD and has already converted ${alreadyConverted.toLocaleString()} WEBD. Only ${remainingOnAddress.toLocaleString()} WEBD remains.`
+          });
+        }
+      }
+
+      // @ts-ignore
+      const totalApproved = await storage.getTotalConverted(req.session.userId);
+      // @ts-ignore
+      const totalPending = await storage.getTotalPendingConversions(req.session.userId);
+      const totalPreviouslyConverted = totalApproved + totalPending;
+
+      const lifetimeCap = 5000000;
+      if (totalPreviouslyConverted + amount > lifetimeCap) {
+        const remaining = lifetimeCap - totalPreviouslyConverted;
+        if (remaining <= 0) {
+          return res.status(400).json({
+            message: `You have reached the lifetime conversion cap of ${lifetimeCap.toLocaleString()} WEBD per account.`
+          });
+        }
+        return res.status(400).json({
+          message: `You can only convert up to ${remaining.toLocaleString()} more WEBD (lifetime cap: ${lifetimeCap.toLocaleString()} WEBD per account).`
+        });
+      }
+
+      const reqRecord = await storage.createConversionRequest({
+        oldWalletAddress: oldAddr,
+        amountClaimed: input.amountClaimed,
+        // @ts-ignore
+        userId: req.session.userId,
+        amountApproved: "0.0000",
+        status: "pending",
+        vestingReleaseDate: null
+      });
+
+      await storage.blockWallet(oldAddr, `Auto-blocked after conversion request #${reqRecord.id}`);
+
+      res.status(201).json(reqRecord);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("Conversion error:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get(api.conversion.list.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const list = await storage.getConversionRequests(req.session.userId);
+    res.json(list);
+  });
+
+  // === Explorer Routes ===
+
+  app.get(api.explorer.blocks.path, async (req, res) => {
+    const blocksList = await storage.getBlocks();
+    const enriched = await Promise.all(blocksList.map(async (block) => {
+      const miner = block.minerId ? await storage.getUser(block.minerId) : null;
+      return { ...block, minerAddress: miner?.walletAddress || null };
+    }));
+    res.json(enriched);
+  });
+
+  app.get(api.explorer.transactions.path, async (req, res) => {
+    const txs = await storage.getTransactions();
+    res.json(txs);
+  });
+
+  // === Blocked Wallets ===
+
+  app.get(api.blockedWallets.list.path, async (req, res) => {
+    const list = await storage.getBlockedWallets();
+    res.json(list);
+  });
+
+  // === Admin Conversion Management ===
+
+  app.get(api.admin.conversions.list.path, async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    const allConversions = await storage.getAllConversionRequests();
+    const enriched = await Promise.all(allConversions.map(async (conv) => {
+      const convUser = conv.userId ? await storage.getUser(conv.userId) : null;
+      return {
+        ...conv,
+        username: convUser?.username || "Unknown",
+        walletAddress: convUser?.walletAddress || null,
+      };
+    }));
+    res.json(enriched);
+  });
+
+  app.post("/api/admin/conversions/:id/approve", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    const convId = parseInt(req.params.id);
+    if (isNaN(convId)) return res.status(400).json({ message: "Invalid conversion ID" });
+
+    const allConversions = await storage.getAllConversionRequests();
+    const conv = allConversions.find(c => c.id === convId);
+    if (!conv) return res.status(404).json({ message: "Conversion request not found" });
+    if (conv.status !== "pending") return res.status(400).json({ message: "Only pending requests can be approved" });
+
+    const customAmount = req.body.amount ? parseFloat(req.body.amount) : null;
+    const approvedAmount = (customAmount && !isNaN(customAmount) && customAmount > 0)
+      ? customAmount
+      : parseFloat(conv.amountClaimed || "0");
+
+    if (approvedAmount <= 0) {
+      return res.status(400).json({ message: "Approved amount must be greater than 0" });
+    }
+
+    const lifetimeCap = 5000000;
+    if (conv.userId) {
+      const totalAlreadyApproved = await storage.getTotalConverted(conv.userId);
+      if (totalAlreadyApproved + approvedAmount > lifetimeCap) {
+        const remaining = lifetimeCap - totalAlreadyApproved;
+        return res.status(400).json({
+          message: `User has already converted ${totalAlreadyApproved.toLocaleString()} WEBD. Can only approve up to ${Math.max(0, remaining).toLocaleString()} more (lifetime cap: ${lifetimeCap.toLocaleString()}).`
+        });
+      }
+    }
+
+    const updated = await storage.updateConversionStatus(convId, "approved", approvedAmount.toFixed(4));
+
+    if (conv.userId) {
+      const convUser = await storage.getUser(conv.userId);
+      if (convUser) {
+        const newBalance = (parseFloat(convUser.balance!) + approvedAmount).toFixed(4);
+        await storage.updateUserBalance(convUser.id, newBalance);
+
+        await storage.createTransaction({
+          senderId: null,
+          receiverId: convUser.id,
+          senderAddress: "LEGACY_CONVERSION",
+          receiverAddress: convUser.walletAddress,
+          amount: approvedAmount.toFixed(4),
+          type: "conversion",
+          blockId: null,
+        });
+      }
+    }
+
+    res.json(updated);
+  });
+
+  app.post("/api/admin/conversions/:id/reject", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    const convId = parseInt(req.params.id);
+    if (isNaN(convId)) return res.status(400).json({ message: "Invalid conversion ID" });
+
+    const allConversions = await storage.getAllConversionRequests();
+    const conv = allConversions.find(c => c.id === convId);
+    if (!conv) return res.status(404).json({ message: "Conversion request not found" });
+    if (conv.status !== "pending") return res.status(400).json({ message: "Only pending requests can be rejected" });
+
+    const updated = await storage.updateConversionStatus(convId, "rejected", "0.0000");
+    res.json(updated);
+  });
+
+  // === Admin Card Waitlist ===
+  app.get("/api/admin/card-waitlist", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    try {
+      const entries = await storage.getAllCardWaitlistEntries();
+      res.json(entries);
+    } catch (err: any) {
+      res.status(500).json({ message: "Failed to fetch waitlist" });
+    }
+  });
+
+  // === Blockchain / WebDollar 2 Routes ===
+
+  app.get("/api/blockchain/status", async (_req, res) => {
+    try {
+      const status = await checkConnection();
+      const tokenAddress = getContractAddress();
+      // Force native WEBD2 network UI display override
+      res.json({ ...status, network: "WEBD2 Testnet", tokenContract: tokenAddress });
+    } catch (err: any) {
+      res.json({ connected: false, network: "Unknown", chainId: null, blockNumber: null, tokenContract: null });
+    }
+  });
+
+  app.get("/api/blockchain/balance/:address", async (req, res) => {
+    try {
+      const address = req.params.address;
+      if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+        return res.status(400).json({ message: "Invalid Polygon address format" });
+      }
+      const tokenBalance = await getOnChainBalance(address);
+      const maticBalance = await getMaticBalance(address);
+      res.json({ address, tokenBalance, maticBalance });
+    } catch (err: any) {
+      res.status(500).json({ message: "Failed to fetch balance" });
+    }
+  });
+
+  app.get("/api/wallet/polygon-info", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const addresses = await storage.getWalletAddresses(user.id);
+    const polygonAddresses = addresses.map(a => ({
+      id: a.id,
+      label: a.label,
+      webdAddress: a.address,
+      polygonAddress: a.polygonAddress,
+      isPrimary: a.isPrimary,
+    }));
+
+    let maticBalance = "0";
+    if (user.polygonAddress) {
+      maticBalance = await getMaticBalance(user.polygonAddress);
+    }
+
+    res.json({
+      primaryPolygonAddress: user.polygonAddress,
+      addresses: polygonAddresses,
+      maticBalance,
+      polygonscanUrl: getPolygonscanBaseUrl(),
+    });
+  });
+
+  app.get("/api/blockchain/explorer/blocks", async (_req, res) => {
+    try {
+      const blocks = await getRecentBlocks(10);
+      res.json({ blocks, polygonscanUrl: getPolygonscanBaseUrl() });
+    } catch {
+      res.json({ blocks: [], polygonscanUrl: getPolygonscanBaseUrl() });
+    }
+  });
+
+  app.get("/api/blockchain/explorer/transactions", async (_req, res) => {
+    try {
+      const blocks = await getRecentBlocks(3);
+      const allTxs = [];
+      for (const block of blocks) {
+        const txs = await getRecentTransactionsFromBlock(block.number, 5);
+        allTxs.push(...txs);
+      }
+      res.json({ transactions: allTxs.slice(0, 15), polygonscanUrl: getPolygonscanBaseUrl() });
+    } catch {
+      res.json({ transactions: [], polygonscanUrl: getPolygonscanBaseUrl() });
+    }
+  });
+
+  app.get("/api/card/waitlist/status", async (req, res) => {
+    // @ts-ignore
+    const userId = req.session.userId;
+    if (!userId) return res.json({ joined: false, position: null, totalCount: 0 });
+    try {
+      const entry = await storage.getCardWaitlistEntry(userId);
+      const totalCount = await storage.getCardWaitlistCount();
+      if (entry) {
+        res.json({ joined: true, email: entry.email, position: entry.id, totalCount });
+      } else {
+        res.json({ joined: false, position: null, totalCount });
+      }
+    } catch (err) {
+      res.json({ joined: false, position: null, totalCount: 0 });
+    }
+  });
+
+  app.post("/api/card/waitlist/join", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Please log in first" });
+    const { email } = req.body;
+    if (!email || typeof email !== "string" || !email.includes("@")) {
+      return res.status(400).json({ message: "Please enter a valid email address" });
+    }
+    try {
+      // @ts-ignore
+      const userId = req.session.userId;
+      const existing = await storage.getCardWaitlistEntry(userId);
+      if (existing) {
+        return res.status(400).json({ message: "You're already on the waitlist" });
+      }
+      // @ts-ignore
+      const entry = await storage.joinCardWaitlist({ userId: req.session.userId, email: email.trim() });
+      const totalCount = await storage.getCardWaitlistCount();
+      res.json({ success: true, position: entry.id, totalCount });
+    } catch (err: any) {
+      console.error("Waitlist join error:", err);
+      res.status(500).json({ message: "Failed to join waitlist" });
+    }
+  });
+
+  app.get("/api/network/stats", async (_req, res) => {
+    try {
+      const stats = await storage.getNetworkStats();
+      res.json(stats);
+    } catch (err) {
+      console.error("Network stats error:", err);
+      res.json({ totalUsers: 0, totalBlocks: 0, totalTransactions: 0, circulatingSupply: "10200000000.0000", latestBlockTime: null });
+    }
+  });
+
+  app.get("/api/explorer/search", async (req, res) => {
+    const q = (req.query.q as string || "").trim();
+    if (!q || q.length < 3) {
+      return res.status(400).json({ message: "Search query must be at least 3 characters" });
+    }
+
+    const results: any = { users: [], addresses: [], transactions: [], blocks: [] };
+
+    if (q.startsWith("WEBD$")) {
+      const addr = await storage.getWalletAddressByAddress(q);
+      if (addr) {
+        results.addresses.push({ address: addr.address, polygonAddress: addr.polygonAddress, label: addr.label, balance: addr.balance });
+      }
+      const user = await storage.getUserByWalletAddress(q);
+      if (user) {
+        results.users.push({ username: user.username, walletAddress: user.walletAddress, polygonAddress: user.polygonAddress });
+      }
+    }
+
+    if (/^0x[a-fA-F0-9]{40}$/.test(q)) {
+      const txs = await storage.getTransactions(50);
+      for (const tx of txs) {
+        if (tx.senderAddress === q || tx.receiverAddress === q) {
+          results.transactions.push(tx);
+        }
+      }
+    }
+
+    if (/^[a-f0-9]{64}$/.test(q)) {
+      const blocksList = await storage.getBlocks(100);
+      const matchedBlock = blocksList.find(b => b.hash === q);
+      if (matchedBlock) results.blocks.push(matchedBlock);
+    }
+
+    if (/^\d+$/.test(q)) {
+      const blocksList = await storage.getBlocks(100);
+      const matchedBlock = blocksList.find(b => b.id === parseInt(q));
+      if (matchedBlock) results.blocks.push(matchedBlock);
+    }
+
+    res.json(results);
+  });
+
+  app.get("/api/blockchain/polygonscan-url", (_req, res) => {
+    res.json({ url: getPolygonscanBaseUrl() });
+  });
+
+  app.post("/api/admin/deploy-token", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !user.isDev) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    const deployerKey = process.env.DEPLOYER_PRIVATE_KEY;
+    if (!deployerKey) {
+      return res.status(500).json({ message: "Deployer key not configured on server" });
+    }
+
+    try {
+      const { deployToken, setContractAddress: setAddr } = await import("./blockchain");
+      const contractAddr = await deployToken(deployerKey);
+      setAddr(contractAddr);
+      res.json({ success: true, contractAddress: contractAddr });
+    } catch (err: any) {
+      console.error("Deploy error:", err);
+      res.status(500).json({ message: "Deployment failed: " + (err.message || "Unknown error") });
+    }
+  });
+
+  // === Stripe / Buy WEBD Routes ===
+
+  app.get("/api/stripe/publishable-key", async (_req, res) => {
+    try {
+      const { getStripePublishableKey } = await import("./stripeClient");
+      const key = await getStripePublishableKey();
+      res.json({ publishableKey: key });
+    } catch (err: any) {
+      res.status(500).json({ message: "Stripe not configured" });
+    }
+  });
+
+  app.get("/api/stripe/products", async (_req, res) => {
+    try {
+      const result = await db.execute(
+        sql`SELECT 
+          p.id as product_id,
+          p.name as product_name,
+          p.description as product_description,
+          p.metadata as product_metadata,
+          pr.id as price_id,
+          pr.unit_amount,
+          pr.currency
+        FROM stripe.products p
+        JOIN stripe.prices pr ON pr.product = p.id AND pr.active = true
+        WHERE p.active = true
+        ORDER BY pr.unit_amount ASC`
+      );
+      if (result.rows && result.rows.length > 0) {
+        return res.json(result.rows);
+      }
+    } catch (err: any) {
+      console.error("Products DB fetch error (falling back to Stripe API):", err.message);
+    }
+
+    try {
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      const prices = await stripe.prices.list({ active: true, expand: ['data.product'], limit: 20 });
+      const products = prices.data
+        .filter((p: any) => p.product && typeof p.product === 'object' && p.product.active && p.product.metadata?.webd_amount)
+        .map((p: any) => ({
+          product_id: p.product.id,
+          product_name: p.product.name,
+          product_description: p.product.description || '',
+          product_metadata: p.product.metadata,
+          price_id: p.id,
+          unit_amount: p.unit_amount,
+          currency: p.currency,
+        }))
+        .sort((a: any, b: any) => a.unit_amount - b.unit_amount);
+      res.json(products);
+    } catch (err2: any) {
+      console.error("Products Stripe API fetch error:", err2.message);
+      res.json([]);
+    }
+  });
+
+  app.post("/api/stripe/checkout", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Please log in to purchase WEBD" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+
+    const { priceId } = req.body;
+    if (!priceId) return res.status(400).json({ message: "Price ID required" });
+
+    try {
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const priceObj = await stripe.prices.retrieve(priceId, { expand: ['product'] });
+      const productObj = priceObj.product as any;
+      const webdAmount = productObj.metadata?.webd_amount || '0';
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: "payment",
+        success_url: `${req.protocol}://${req.get("host")}/wallet?purchase=success&amount=${webdAmount}`,
+        cancel_url: `${req.protocol}://${req.get("host")}/buy?purchase=cancelled`,
+        metadata: {
+          userId: String(user.id),
+          username: user.username,
+          webd_amount: webdAmount,
+        },
+      });
+
+      res.json({ url: session.url });
+    } catch (err: any) {
+      console.error("Checkout error:", err);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  const WEBD_PRICE_USD = 0.000963;
+  const MIN_CUSTOM_PURCHASE = 10000;
+  const MAX_CUSTOM_PURCHASE = 5000000;
+
+  app.post("/api/stripe/checkout-custom", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Please log in to purchase WEBD" });
+    // @ts-ignore
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+
+    const { webdAmount } = req.body;
+    const amount = parseInt(webdAmount);
+    if (!amount || isNaN(amount) || amount < MIN_CUSTOM_PURCHASE) {
+      return res.status(400).json({ message: `Minimum purchase is ${MIN_CUSTOM_PURCHASE.toLocaleString()} WEBD per transaction` });
+    }
+    if (amount > MAX_CUSTOM_PURCHASE) {
+      return res.status(400).json({ message: `Maximum purchase is ${MAX_CUSTOM_PURCHASE.toLocaleString()} WEBD per day per address` });
+    }
+
+    const priceInCents = Math.max(50, Math.round(amount * WEBD_PRICE_USD * 100));
+
+    try {
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [{
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `${amount.toLocaleString()} WEBD Tokens`,
+              description: `Custom purchase of ${amount.toLocaleString()} WebDollar 2 tokens`,
+              metadata: { webd_amount: String(amount), tier: "custom" },
+            },
+            unit_amount: priceInCents,
+          },
+          quantity: 1,
+        }],
+        mode: "payment",
+        success_url: `${req.protocol}://${req.get("host")}/wallet?purchase=success&amount=${amount}`,
+        cancel_url: `${req.protocol}://${req.get("host")}/buy?purchase=cancelled`,
+        metadata: {
+          userId: String(user.id),
+          username: user.username,
+          webd_amount: String(amount),
+        },
+      });
+
+      res.json({ url: session.url });
+    } catch (err: any) {
+      console.error("Custom checkout error:", err);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  const helpOpenai = new OpenAI({
+    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "sk-dummy_key_to_bypass_openai_startup_crash",
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  });
+
+  const WEBDOLLAR_SYSTEM_PROMPT = `You are the WebDollar 2 Help Assistant. You answer questions about WDollar 2 (WEBD), a cryptocurrency platform. Be concise, friendly, and helpful. Always refer to the project as "WebDollar 2" or "WDollar 2" — never "2.0".
+
+Key facts you know:
+- WebDollar 2 is a cryptocurrency with the ticker WEBD. Price is approximately $0.00099900 per WEBD.
+- Total supply: 68 billion WEBD tokens. Distribution: 85% public mining (57.8B), 10% dev allocation (6.8B), 5% foundation (3.4B).
+- Mining uses Proof-of-Stake (PoS). Users stake WEBD tokens and earn passive rewards. Base rate: 550 WEBD distributed every 30 seconds among all stakers, designed for a 100-year supply duration.
+- Minimum stake: 5,000 WEBD. There is a 30-second cooldown between claiming rewards. APY varies based on total network stake.
+- Each wallet generates a 12-word BIP39 seed phrase, a WEBD$ address, and a Polygon-compatible 0x address from the same private key using secp256k1 cryptography.
+- Users can create multiple addresses under one account from the Addresses page. Each address has its own balance and can be locked for security.
+- The platform is connected to the Polygon (Amoy testnet) blockchain via Alchemy RPC. Users can view their MATIC balance and Polygonscan links.
+- Legacy WEBD v1 tokens can be converted 1:1 to WDollar 2, with a lifetime cap of 5,000,000 WEBD per account, up to 1,000,000 every 6 months.
+- WEBD tokens can be purchased with credit/debit card via Stripe. Available packages range from $9.99 to $299.99.
+- Transfers between users are free and instant within the platform.
+- The block explorer shows both internal WEBD blocks/transactions and real Polygon network data with Polygonscan links.
+- Two-Factor Authentication (2FA) is available using authenticator apps like Google Authenticator or Authy.
+- The crypto debit card feature allows spending WEBD at merchants (conceptual/coming soon).
+- The platform is a Progressive Web App (PWA) — installable on mobile and desktop.
+
+Navigation help:
+- Home page (/) — Overview, tokenomics chart, features, roadmap
+- Wallet (/wallet) — Balance, transfers, staking, mining terminal, transaction history
+- Addresses (/addresses) — Create and manage multiple wallet addresses
+- Buy (/buy) — Purchase WEBD tokens with card
+- Explorer (/explorer) — Browse blocks and transactions, search by address or hash
+- Conversion (/conversion) — Convert legacy WEBD v1 tokens
+- Card (/card) — Crypto debit card info
+
+If you don't know something, say so honestly. Do not make up information. Keep answers brief (2-4 sentences) unless the user asks for detailed explanation.`;
+
+  app.post("/api/help/chat", async (req, res) => {
+    // ... [existing help chat code]
+    try {
+      const parsed = helpChatInputSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid request. Messages array is required." });
+      }
+
+      const ip = req.ip || "unknown";
+      if (rateLimit(`help_chat:${ip}`, 20, 60000)) {
+        return res.status(429).json({ error: "Too many requests. Please wait a moment." });
+      }
+
+      const chatMessages = [
+        { role: "system" as const, content: WEBDOLLAR_SYSTEM_PROMPT },
+        ...parsed.data.messages.map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
+      ];
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      const stream = await helpOpenai.chat.completions.create({
+        model: "gpt-5-nano",
+        messages: chatMessages,
+        stream: true,
+        max_completion_tokens: 1024,
+      });
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) {
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
+      }
+
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.end();
+    } catch (error: any) {
+      console.error("Help chat error:", error);
+      if (res.headersSent) {
+        res.write(`data: ${JSON.stringify({ error: "Something went wrong" })}\n\n`);
+        res.end();
+      } else {
+        res.status(500).json({ error: "Failed to get response" });
+      }
+    }
+  });
+
+  return httpServer;
+}

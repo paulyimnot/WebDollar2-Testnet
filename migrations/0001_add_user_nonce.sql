@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "nonce" integer DEFAULT 0 NOT NULL;

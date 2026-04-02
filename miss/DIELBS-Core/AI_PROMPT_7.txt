@@ -1,0 +1,165 @@
+Here is the proposed architecture and refactored code for the "Decoupled Instant Execution with Lazy Block Settlement" (DIELBS) for DIELBS Engine. 
+
+Our goal remains strictly 0.5 to 2 milliseconds for transaction validation and acceptance (local/LAN quorum). 
+
+This represents the output of a previous AI audit. We need your specialized blockchain/crypto expertise to heavily critique this structure. Specifically:
+1. Is the `HotStateEngine` reservation and commit logic vulnerable to any race conditions, deadlocks, or double-spends under extreme high throughput?
+2. Does the compact 64-byte `r||s` signature and binary serialization actually provide the maximal speed we need for the 0.5ms target, or is there a better verifiable primitive we should use?
+3. What happens to the mempool/reservations if a quorum drops offline mid-vote?
+
+Please audit the math, the concurrency locks, and the cryptography in the below proposal.
+
+---
+
+### **Refactored: `Transaction.ts`**
+```typescript
+import { Wallet } from '../crypto/Wallet';
+import { roundToDecimals, DECIMALS } from './Constants';
+
+let sha256HexUtf8: (dataUtf8: string) => string;
+try {
+  const nodeCrypto = require('node:crypto') as typeof import('crypto');
+  sha256HexUtf8 = (dataUtf8: string) =>
+    nodeCrypto.createHash('sha256').update(dataUtf8, 'utf8').digest('hex');
+} catch {
+  const CryptoJS = require('crypto-js') as typeof import('crypto-js');
+  sha256HexUtf8 = (dataUtf8: string) =>
+    (CryptoJS as any).SHA256((CryptoJS as any).enc.Utf8.parse(dataUtf8)).toString();
+}
+
+export type SignatureFormat = 'compact-rs64';
+
+export class Transaction {
+  public sender: string;
+  public recipient: string;
+  public amount: number; // Planned to migrate to BigInt
+  public fee: number;
+
+  public chainId: string;
+  public nonce: number;
+  public timestamp: number;
+  public expiresAt: number;
+
+  public publicKey: string;
+  public signature: string;
+  public signatureFormat: SignatureFormat;
+
+  public payloadHash: string;
+  public txId: string;
+
+  constructor(args: {
+    sender: string; recipient: string; amount: number; fee: number;
+    chainId: string; nonce: number; timestamp?: number; expiresAt?: number;
+    publicKey?: string;
+  }) {
+    this.sender = args.sender;
+    this.recipient = args.recipient;
+    this.amount = roundToDecimals(args.amount);
+    this.fee = roundToDecimals(args.fee);
+    this.chainId = args.chainId;
+    this.nonce = args.nonce;
+    this.timestamp = args.timestamp ?? Date.now();
+    this.expiresAt = args.expiresAt ?? (this.timestamp + 60_000);
+    this.publicKey = args.publicKey ?? '';
+    this.signature = '';
+    this.signatureFormat = 'compact-rs64';
+    
+    this.payloadHash = this.calculatePayloadHash();
+    this.txId = '';
+  }
+
+  private serializeUnsignedPayload(): string {
+    return [
+      this.chainId, this.sender, this.recipient,
+      this.amount.toFixed(DECIMALS), this.fee.toFixed(DECIMALS),
+      String(this.nonce), String(this.timestamp), String(this.expiresAt),
+    ].join('|');
+  }
+
+  public calculatePayloadHash(): string {
+    return sha256HexUtf8(this.serializeUnsignedPayload());
+  }
+
+  public validate(opts: any = {}): string {
+    if (!this.sender || !this.recipient) return 'MISSING_FIELDS';
+    if (this.amount <= 0 || this.fee < 0) return 'NON_POSITIVE_UNITS';
+    if (this.expiresAt <= Date.now()) return 'EXPIRED';
+
+    const expectedHash = this.calculatePayloadHash();
+    if (expectedHash !== this.payloadHash) return 'HASH_MISMATCH';
+
+    // Requires fast caching Wallet.verifyTxFast()
+    if (!this.signature) return 'MISSING_SIGNATURE';
+    
+    return 'OK'; // Signature verify handled downstream or injected here
+  }
+}
+```
+
+---
+
+### **Refactored: `Blockchain.ts` (Core Engine)**
+```typescript
+type HotAccount = { balance: number; reserved: number; nonce: number; };
+
+class HotStateEngine {
+  private hot: Map<string, HotAccount> = new Map();
+  private locks: Map<string, Promise<void>> = new Map();
+
+  constructor(private getChainBalance: (addr: string) => number) {}
+
+  private async withLock<T>(addr: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.locks.get(addr) ?? Promise.resolve();
+    let release!: () => void;
+    const next = new Promise<void>(res => (release = res));
+    this.locks.set(addr, prev.then(() => next));
+    await prev;
+    try { return await fn(); } finally { release(); }
+  }
+
+  private getOrInit(addr: string): HotAccount {
+    let a = this.hot.get(addr);
+    if (!a) {
+      a = { balance: this.getChainBalance(addr), reserved: 0, nonce: 0 };
+      this.hot.set(addr, a);
+    }
+    return a;
+  }
+
+  public async preAccept(tx: Transaction): Promise<{ reservation: number }> {
+    return this.withLock(tx.sender, async () => {
+      const sender = this.getOrInit(tx.sender);
+      const debit = tx.amount + tx.fee;
+      
+      if (tx.nonce !== sender.nonce + 1) throw new Error('Bad nonce');
+      if (sender.balance - sender.reserved < debit) throw new Error('Insufficient available');
+
+      sender.reserved += debit;
+      return { reservation: debit };
+    });
+  }
+
+  public async commit(tx: Transaction, reservation: number): Promise<void> {
+    const [first, second] = tx.sender < tx.recipient ? [tx.sender, tx.recipient] : [tx.recipient, tx.sender];
+
+    await this.withLock(first, async () => {
+      await this.withLock(second, async () => {
+        const sender = this.getOrInit(tx.sender);
+        const recipient = this.getOrInit(tx.recipient);
+
+        sender.balance -= reservation;
+        sender.reserved -= reservation;
+        recipient.balance += tx.amount;
+        sender.nonce = tx.nonce;
+      });
+    });
+  }
+
+  public async rollback(tx: Transaction, reservation: number): Promise<void> {
+    await this.withLock(tx.sender, async () => {
+      const sender = this.getOrInit(tx.sender);
+      sender.reserved -= reservation;
+    });
+  }
+}
+```
