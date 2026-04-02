@@ -860,7 +860,49 @@ export async function registerRoutes(
     }
   });
 
-  // === User Transaction History ===
+  app.post('/api/wallet/transfer/private', async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const { recipientAddress, amount } = req.body;
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) return res.status(400).json({ message: "Invalid amount" });
+
+    // @ts-ignore
+    const sender = await storage.getUser(req.session.userId);
+    if (!sender) return res.status(401).json({ message: "User not found" });
+
+    if (parseFloat(sender.balance!) < amountNum) return res.status(400).json({ message: "Insufficient balance" });
+
+    const recipientWalletAddr = await storage.getWalletAddressByAddress(recipientAddress.trim());
+    if (!recipientWalletAddr) return res.status(400).json({ message: "Recipient not found on the network" });
+
+    const recipient = await storage.getUser(recipientWalletAddr.userId);
+    if (!recipient) return res.status(400).json({ message: "Recipient account not found" });
+
+    const senderWalletAddr = await storage.getWalletAddressByAddress(sender.walletAddress!);
+    const senderAddrId = senderWalletAddr ? senderWalletAddr.id : null;
+
+    try {
+      // 🕵️ MASKED LEDGER LOGGING
+      const tx = await storage.executeTransfer(
+        sender.id,
+        recipient.id,
+        senderAddrId,
+        recipientWalletAddr.id,
+        amountNum,
+        "***PRIVATE_SENDER***",
+        "***PROTECTED_RECIPIENT***"
+      );
+
+      // Replay protection even for private
+      await storage.updateWalletBalance(sender.walletAddress!, 0n, (sender.nonce || 0) + 1);
+
+      res.json(tx);
+    } catch (err: any) {
+      return res.status(400).json({ message: err.message || "Failed" });
+    }
+  });
 
   app.get(api.transactions.mine.path, async (req, res) => {
     // @ts-ignore
