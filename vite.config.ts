@@ -19,15 +19,16 @@ export default defineConfig({
           m.devBanner(),
         ),
       ]
-      : []), +++++++ ------------------------------------------------
-    resolve: {
-      alias: {
-        "@": path.resolve(process.cwd(), "client", "src"),
-        "@shared": path.resolve(process.cwd(), "shared"),
-        "@assets": path.resolve(process.cwd(), "attached_assets"),
-      },
+      : []),
+  ],
+  resolve: {
+    alias: {
+      "@": path.resolve(process.cwd(), "client", "src"),
+      "@shared": path.resolve(process.cwd(), "shared"),
+      "@assets": path.resolve(process.cwd(), "attached_assets"),
     },
-    root: path.resolve(process.cwd(), "client"),
+  },
+  root: path.resolve(process.cwd(), "client"),
     build: {
       target: "esnext",
       minify: false,
