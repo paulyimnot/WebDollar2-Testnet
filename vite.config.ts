@@ -29,19 +29,19 @@ export default defineConfig({
     },
   },
   root: path.resolve(process.cwd(), "client"),
-    build: {
-      target: "esnext",
-      minify: false,
-      outDir: path.resolve(process.cwd(), "dist", "public"),
-      emptyOutDir: true,
+  build: {
+    target: "esnext",
+    minify: false,
+    outDir: path.resolve(process.cwd(), "dist", "public"),
+    emptyOutDir: true,
+  },
+  server: {
+    fs: {
+      strict: true,
+      deny: ["**/.*"],
     },
-    server: {
-      fs: {
-        strict: true,
-        deny: ["**/.*"],
-      },
-    },
-    optimizeDeps: {
-      include: ["date-fns"],
-    },
+  },
+  optimizeDeps: {
+    include: ["date-fns"],
+  },
 });
