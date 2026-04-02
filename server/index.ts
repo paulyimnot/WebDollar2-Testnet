@@ -58,9 +58,10 @@ async function initStripe() {
     return;
   }
 
-  // Guard against non-Replit environments for the managed sync package
-  if (!process.env.REPLIT_DOMAINS && !process.env.X_REPLIT_TOKEN && process.env.NODE_ENV?.trim() !== "production") {
-    console.log("Local development environment detected: Skipping Replit-specific Stripe sync initialization.");
+  // Only enable managed Stripe sync on Replit where it's a natively managed service
+  const isReplit = !!(process.env.REPLIT_DOMAINS || process.env.X_REPLIT_TOKEN || process.env.REPL_ID);
+  if (!isReplit) {
+    console.log("Non-Replit environment detected: Skipping managed Stripe sync.");
     return;
   }
 
