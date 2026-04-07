@@ -171,6 +171,10 @@ export default function Wallet() {
           credentials: 'include'
         });
         if (resp.ok) {
+          queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/addresses"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/transactions/mine"] });
           toast({ title: "PRIVATE TRANSFER CONFIRMED", description: `Sent ${amount} WD2 privately.`, className: "border-accent text-accent bg-card font-mono" });
           setRecipient("");
           setAmount("");

@@ -244,23 +244,28 @@ export class DatabaseStorage implements IStorage {
   ): Promise<Transaction> {
     const client = await pool.connect();
     try {
+      console.log(`[TRANSFER] Initiating: ${senderAddress} -> ${receiverAddress} (${amount} WEBD)`);
       await client.query('BEGIN');
 
+      // 1. Deduct from sender account
       const senderResult = await client.query(
-        'UPDATE users SET balance = (balance::numeric - $1::numeric) WHERE id = $2 AND balance::numeric >= $1::numeric RETURNING *',
+        'UPDATE users SET balance = (balance::numeric - $1::numeric), nonce = nonce + 1 WHERE id = $2 AND balance::numeric >= $1::numeric RETURNING *',
         [amount.toFixed(4), senderId]
       );
 
       if (senderResult.rowCount === 0) {
         await client.query('ROLLBACK');
+        console.error(`[TRANSFER] FAILED: Insufficient balance for user ${senderId}`);
         throw new Error('Insufficient balance');
       }
 
+      // 2. Add to receiver account
       await client.query(
         'UPDATE users SET balance = (balance::numeric + $1::numeric) WHERE id = $2',
         [amount.toFixed(4), receiverId]
       );
 
+      // 3. Update specific wallet address balances for ledger consistency
       if (senderAddrId) {
         await client.query(
           'UPDATE wallet_addresses SET balance = GREATEST(0, balance::numeric - $1::numeric) WHERE id = $2',
@@ -273,6 +278,7 @@ export class DatabaseStorage implements IStorage {
         [amount.toFixed(4), receiverAddrId]
       );
 
+      // 4. Record transaction
       const txResult = await client.query(
         `INSERT INTO transactions (sender_id, receiver_id, sender_address, receiver_address, amount, type, block_id)
          VALUES ($1, $2, $3, $4, $5, 'transfer', NULL)
@@ -283,9 +289,11 @@ export class DatabaseStorage implements IStorage {
       );
 
       await client.query('COMMIT');
+      console.log(`[TRANSFER] SUCCESS: TX ${txResult.rows[0].id} recorded.`);
       return txResult.rows[0] as Transaction;
     } catch (err) {
       await client.query('ROLLBACK');
+      console.error(`[TRANSFER] EXCEPTION:`, err);
       throw err;
     } finally {
       client.release();

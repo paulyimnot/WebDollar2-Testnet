@@ -31,6 +31,7 @@ export function useWallet() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.wallet.get.path] });
+      queryClient.invalidateQueries({ queryKey: [api.wallet.addresses.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.explorer.transactions.path] });
       queryClient.invalidateQueries({ queryKey: [api.transactions.mine.path] });
       toast({
