@@ -345,7 +345,7 @@ export class DatabaseStorage implements IStorage {
   async updateWalletBalance(address: string, amountChange: bigint, newNonce?: number): Promise<void> {
     const changeStr = (Number(amountChange) / 1_000_000).toFixed(4);
     const updateData: any = { 
-      balance: sql`(balance::numeric + ${changeStr}::numeric)::text`
+      balance: sql`(balance::numeric + ${changeStr}::numeric)`
     };
     if (newNonce !== undefined) {
       updateData.nonce = newNonce;
@@ -353,7 +353,7 @@ export class DatabaseStorage implements IStorage {
 
     await db.update(users).set(updateData).where(eq(users.walletAddress, address));
     await db.update(walletAddresses).set({
-      balance: sql`(balance::numeric + ${changeStr}::numeric)::text`
+      balance: sql`(balance::numeric + ${changeStr}::numeric)`
     }).where(eq(walletAddresses.address, address));
   }
 
