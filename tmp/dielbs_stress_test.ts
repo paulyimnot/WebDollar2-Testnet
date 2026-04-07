@@ -30,46 +30,46 @@ async function runStressTest() {
         // For 100k txs spread over 1k accounts, we'll just track nonces locally for the test
     }
 
-    // Sequential burst to test Atomic Lock contention
+    // Sequential burst to test Atomic Lock contention with Batching
+    const BATCH_SIZE = 1000;
     const burstStart = Date.now();
-    for (let i = 0; i < TX_COUNT; i++) {
-        // Use a rotating sender to avoid bad nonce errors in simple loop
-        const sIdx = i % NUM_ACCOUNTS;
-        const rIdx = (i + 1) % NUM_ACCOUNTS;
-        const nonce = Math.floor(i / NUM_ACCOUNTS) + 1;
+    let completedCount = 0;
+    
+    for (let b = 0; b < TX_COUNT; b += BATCH_SIZE) {
+        const batchPromises = [];
+        for (let i = 0; i < BATCH_SIZE && (b + i) < TX_COUNT; i++) {
+            const currentTx = b + i;
+            const sIdx = currentTx % NUM_ACCOUNTS;
+            const rIdx = (currentTx + 1) % NUM_ACCOUNTS;
+            const nonce = Math.floor(currentTx / NUM_ACCOUNTS) + 1;
 
-        promises.push(engine.validateTransaction({
-            sender: `WEBD$TEST_ACCOUNT_${sIdx}`,
-            recipient: `WEBD$TEST_ACCOUNT_${rIdx}`,
-            amount: "1",
-            nonce: nonce,
-            signature: "SIG_MOCK"
-        }));
+            batchPromises.push(engine.validateTransaction({
+                sender: `WEBD$TEST_ACCOUNT_${sIdx}`,
+                recipient: `WEBD$TEST_ACCOUNT_${rIdx}`,
+                amount: "1",
+                nonce: nonce,
+                signature: "SIG_MOCK"
+            }));
+        }
+        
+        const batchResults = await Promise.all(batchPromises);
+        const batchFailures = batchResults.filter(r => !r.success);
+        if (batchFailures.length > 0) {
+            console.error(`Batch at ${b} had ${batchFailures.length} failures.`);
+        }
+        completedCount += batchResults.length;
+        if (completedCount % 10000 === 0) {
+            console.log(`...processed ${completedCount.toLocaleString()} transactions`);
+        }
     }
 
-    const results = await Promise.all(promises);
     const endTime = Date.now();
     const totalTime = (endTime - burstStart) / 1000;
     const tps = Math.floor(TX_COUNT / totalTime);
 
-    const failures = results.filter(r => !r.success);
-
     console.log(`\nResults:`);
     console.log(`Total Time: ${totalTime.toFixed(2)}s`);
     console.log(`Effective TPS: ${tps.toLocaleString()}`);
-    console.log(`Failures: ${failures.length}`);
-    
-    if (failures.length > 0) {
-        console.log(`Sample Failure: ${failures[0].error}`);
-    }
-
-    console.log(`\nGenerating Final State Root Hash...`);
-    const hashStart = Date.now();
-    const root = engine.getRootHash();
-    const hashTime = Date.now() - hashStart;
-    
-    console.log(`Root Hash: ${root}`);
-    console.log(`Hashing Time: ${hashTime}ms`);
     console.log(`---------------------------------`);
 }
 

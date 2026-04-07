@@ -21,6 +21,7 @@ async function migrate() {
       UPDATE users SET balance = '0' WHERE balance IS NULL;
       UPDATE users SET staked_balance = '0' WHERE staked_balance IS NULL;
       UPDATE wallet_addresses SET balance = '0' WHERE balance IS NULL;
+      UPDATE users SET nonce = 0 WHERE nonce IS NULL;
     `);
 
     // Add nonce to users if it doesn't exist

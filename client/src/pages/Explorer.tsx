@@ -198,7 +198,7 @@ export default function Explorer() {
                     </tr>
                   ))}
                   {(!polygonBlocks?.blocks || polygonBlocks.blocks.length === 0) && (
-                    <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">Connecting to DIELBS Engine...</td></tr>
+                    <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">Connecting to WebDollar 2 Testnet...</td></tr>
                   )}
                 </tbody>
               </table>

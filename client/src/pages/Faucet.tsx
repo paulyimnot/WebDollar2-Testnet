@@ -121,7 +121,7 @@ export default function Faucet() {
                 disabled={isClaiming || !address} 
                 className="w-full h-14 font-heading text-xl font-bold tracking-widest hover:bg-primary/80 transition-all btn-neon group"
               >
-                {isClaiming ? "CONNECTING DIELBS..." : "CLAIM 100 WEBD2"}
+                {isClaiming ? "CONNECTING TO TESTNET..." : "CLAIM 100 WEBD2"}
                 {!isClaiming && <Droplets className="w-5 h-5 ml-2 opacity-50 group-hover:opacity-100 transition-opacity" />}
               </Button>
             </div>

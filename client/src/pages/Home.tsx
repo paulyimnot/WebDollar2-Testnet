@@ -243,7 +243,7 @@ export default function Home() {
             <CyberCard title="PHASE 01">
               <h3 className="text-xl font-bold text-white mb-2 italic">STRESS TEST</h3>
               <ul className="list-disc list-inside font-mono text-sm space-y-2 text-primary/80">
-                <li>DIELBS Node Stress-test</li>
+                <li>WebDollar 2 Testnet Stress-test</li>
                 <li>Ecosystem App Interface</li>
                 <li>P2P Transaction Sprints</li>
                 <li>Economic Vulnerability Sweep</li>

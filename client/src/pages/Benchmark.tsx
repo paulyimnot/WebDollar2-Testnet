@@ -90,7 +90,7 @@ export default function Benchmark() {
         <div className="container mx-auto px-4 py-8 space-y-6">
             <div className="border-b border-primary/20 pb-4">
                 <h1 className="text-4xl font-heading text-accent flex items-center gap-3">
-                    <Activity className="w-8 h-8" /> DIELBS BENCHMARK
+                    <Activity className="w-8 h-8" /> WebDollar 2 Testnet Benchmark
                 </h1>
                 <p className="font-mono text-muted-foreground text-sm mt-2">
                     Decoupled Instant Execution with Lazy Block Settlement. Raw TypeScript Native Worker.
