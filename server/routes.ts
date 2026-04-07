@@ -71,6 +71,27 @@ export async function registerRoutes(
     store: new SessionStore({ checkPeriod: 86400000 }),
   }));
 
+  // === Dev Wipe Route ===
+  app.get("/api/dev/wipe-testnet-now", async (req, res) => {
+    try {
+      await db.execute(sql`
+        TRUNCATE TABLE transactions CASCADE;
+        TRUNCATE TABLE blocks CASCADE;
+        TRUNCATE TABLE wallet_addresses CASCADE;
+        TRUNCATE TABLE conversion_requests CASCADE;
+        TRUNCATE TABLE registration_ip_log CASCADE;
+        TRUNCATE TABLE faucet_claim_log CASCADE;
+        TRUNCATE TABLE banned_ips CASCADE;
+        TRUNCATE TABLE users CASCADE;
+        TRUNCATE TABLE card_waitlist CASCADE;
+        TRUNCATE TABLE user_rewards CASCADE;
+      `);
+      res.send("<h1>DATABASE WIPED SUCCESSFULLY. Start Fresh!</h1>");
+    } catch (err: any) {
+      res.status(500).send("Wipe failed: " + err.message);
+    }
+  });
+
   // === Auth Routes ===
   // Persistent anti-Sybil protection relocated to DB (registration_ip_log)
   
