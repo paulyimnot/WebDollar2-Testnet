@@ -927,8 +927,8 @@ export async function registerRoutes(
 
   // === Proof-of-Stake Staking Routes ===
 
-  const STAKING_REWARD_RATE = 550; // 550 WEBD per 30 seconds distributed among all stakers (~100 year supply)
-  const REWARD_INTERVAL_SECONDS = 30;
+  const STAKING_REWARD_RATE = 1150; // 1,150 WEBD distributed every 5 seconds among all stakers (Matches Home/Chat spec)
+  const REWARD_INTERVAL_SECONDS = 5;
   const MIN_STAKE_AMOUNT = 1000;
   const MIN_CLAIM_INTERVAL_MS = 30000; // 30 seconds minimum between claims
 
@@ -1954,6 +1954,34 @@ If you don't know something, say so honestly. Do not make up information. Keep a
       }
     }
   });
+
+  // === Background Block Producer (DIELBS Engine) ===
+  // Generates 1 native block every 5 seconds to match specification
+  setInterval(async () => {
+    try {
+      const latest = await storage.getLatestBlock();
+      const nextId = (latest?.id || 0) + 1;
+      const prevHash = latest?.hash || "0000000000000000000000000000000000000000000000000000000000000000";
+      
+      // Seed a semi-random hash for the new block
+      const newHash = createHash("sha256").update(prevHash + Date.now() + nextId).digest("hex");
+      
+      await storage.createBlock({
+        hash: newHash,
+        previousHash: prevHash,
+        minerId: null, // System generated block for Testnet stability
+        reward: STAKING_REWARD_RATE.toFixed(4),
+        difficulty: 1,
+        nonce: Math.floor(Math.random() * 1000000)
+      });
+      
+      if (nextId % 100 === 0) {
+        console.log(`[DIELBS] Produced Block #${nextId} | Rewards Pool: ${STAKING_REWARD_RATE} WEBD2`);
+      }
+    } catch (err) {
+      console.error("[DIELBS] Block production error:", err);
+    }
+  }, 5000);
 
   return httpServer;
 }

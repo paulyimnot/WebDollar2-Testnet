@@ -198,7 +198,7 @@ export default function Miner() {
               <span className="text-xs font-mono text-accent">MINING ACTIVE — REWARDS AUTO-DEPOSITED</span>
             </div>
             <div className="text-[10px] font-mono text-muted-foreground">
-              Your {stakedNum.toLocaleString()} WEBD2 is mining rewards. Rewards accrue every 30 seconds and are automatically added to your available balance.
+              Your {stakedNum.toLocaleString()} WEBD2 is mining rewards. Rewards accrue every 5 seconds and are automatically added to your available balance.
             </div>
           </div>
         )}
@@ -225,7 +225,7 @@ export default function Miner() {
         <div className="p-3 bg-card border border-primary/20 rounded-md mb-3 flex items-start gap-2" data-testid="notice-min-stake">
           <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
           <span className="text-xs font-mono text-muted-foreground">
-            <span className="text-foreground font-semibold">Minimum 1,000 WD2 required to mine.</span> Stake at least 1,000 WD2 to start earning rewards. Rewards are auto-deposited every 30 seconds proportionally among all miners.
+            <span className="text-foreground font-semibold">Minimum 1,000 WD2 required to mine.</span> Stake at least 1,000 WD2 to start earning rewards. Rewards are auto-deposited every 5 seconds proportionally among all miners.
           </span>
         </div>
 
