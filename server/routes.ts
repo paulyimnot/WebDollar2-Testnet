@@ -899,9 +899,20 @@ export async function registerRoutes(
   function calculatePendingRewards(userStaked: number, totalNetworkStaked: number, lastClaimTime: Date | null): number {
     if (userStaked <= 0 || totalNetworkStaked <= 0) return 0;
     const now = Date.now();
+    // Default to 'now' if no lastClaimTime to prevent initial massive reward on first stake
     const lastClaim = lastClaimTime ? lastClaimTime.getTime() : now;
     const elapsedSeconds = Math.max(0, (now - lastClaim) / 1000);
-    const rewardPeriods = elapsedSeconds / REWARD_INTERVAL_SECONDS;
+
+    // 🛡️ LIVENESS CHECK: WebDollar 2 is a browser-native protocol. 
+    // To maintain network integrity and the "Social Contract" of mining, 
+    // rewards only accumulate while the routing node (browser) is active.
+    const LIVENESS_THRESHOLD_SECONDS = 30; // 30s grace period for network jitters
+    
+    // If they've been away longer than the threshold, we only reward the most recent active block
+    // This stops "offline" passive earning, ensuring you only earn while the browser is 'Mining'.
+    const effectiveElapsed = elapsedSeconds > LIVENESS_THRESHOLD_SECONDS ? REWARD_INTERVAL_SECONDS : elapsedSeconds;
+
+    const rewardPeriods = effectiveElapsed / REWARD_INTERVAL_SECONDS;
     const userShare = userStaked / totalNetworkStaked;
     return userShare * STAKING_REWARD_RATE * rewardPeriods;
   }

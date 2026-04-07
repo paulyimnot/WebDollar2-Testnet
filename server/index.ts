@@ -25,7 +25,7 @@ app.use(compression());
 // 🚫 SPAM PROTECTION (Global)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
+  max: 1000, // Increased to 1000 for public stress testing
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests from this IP, please try again after 15 minutes" }
@@ -33,11 +33,11 @@ const globalLimiter = rateLimit({
 
 // Apply stricter limits to Auth/Faucet
 const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, 
+  windowMs: 15 * 60 * 1000, // 15 minutes (Relaxed from 1 hour)
+  max: 100, // Increased to 100 for testing
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: "Stric limit: Too many authentication attempts. Try again in an hour." }
+  message: { message: "Strict limit: Too many authentication attempts. Try again in 15 minutes." }
 });
 
 app.use("/api/auth/register", authLimiter);
