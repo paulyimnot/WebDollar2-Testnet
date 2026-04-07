@@ -84,7 +84,6 @@ export async function registerRoutes(
         TRUNCATE TABLE banned_ips CASCADE;
         TRUNCATE TABLE users CASCADE;
         TRUNCATE TABLE card_waitlist CASCADE;
-        TRUNCATE TABLE user_rewards CASCADE;
       `);
       res.send("<h1>DATABASE WIPED SUCCESSFULLY. Start Fresh!</h1>");
     } catch (err: any) {

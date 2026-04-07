@@ -181,7 +181,14 @@ export default function Home() {
                   * Note: Emission halving occurs every 3 years. Initial block reward is 1,150 WEBD2 with an execution block time of 5 seconds. V1 migration has a strict active-claim deadline.
                 </div>
               </div>
+            <motion.div className="pt-6">
+              <a href="/api/dev/wipe-testnet-now" target="_blank" className="inline-block mt-4">
+                <Button variant="destructive" size="lg" className="px-8 border border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white font-mono gap-2 rounded-none">
+                  NUKE / WIPE DATABASE
+                </Button>
+              </a>
             </motion.div>
+          </motion.div>
 
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
