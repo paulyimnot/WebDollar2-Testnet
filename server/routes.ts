@@ -170,9 +170,22 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Username and password are required" });
       }
 
-      const username = sanitizeUsername(rawUsername);
-      const user = await storage.getUserByUsername(username);
-      console.log(`[LOGIN] Attempt for username: "${username}", user found: ${!!user}`);
+      const rawTrimmed = rawUsername.trim();
+      const sanitized = sanitizeUsername(rawTrimmed);
+      
+      let user = await storage.getUserByUsername(rawTrimmed); // Exact match first (Legacy support)
+      if (!user) {
+        user = await storage.getUserByUsername(sanitized); // Sanitized match (New users)
+      }
+      if (!user) {
+        // Final fallback: Case-insensitive match on the raw username
+        const fallbackResult = await db.execute(sql`SELECT * FROM users WHERE username ILIKE ${rawTrimmed} LIMIT 1`);
+        if (fallbackResult.rows.length > 0) {
+           user = fallbackResult.rows[0] as any;
+        }
+      }
+
+      console.log(`[LOGIN] Attempt for username: "${rawTrimmed}", user found: ${!!user}`);
 
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
@@ -180,14 +193,14 @@ export async function registerRoutes(
 
       const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
-        console.log(`[LOGIN] Invalid password for user: "${username}"`);
+        console.log(`[LOGIN] Invalid password for user: "${rawTrimmed}"`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      console.log(`[LOGIN] Password valid for "${username}", 2FA enabled: ${user.is2faEnabled}, has TOTP: ${!!user.totpSecret}`);
+      console.log(`[LOGIN] Password valid for "${rawTrimmed}", 2FA enabled: ${user.is2faEnabled}, has TOTP: ${!!user.totpSecret}`);
 
       if (user.is2faEnabled && user.totpSecret) {
-        console.log(`[LOGIN] Requiring 2FA for "${username}"`);
+        console.log(`[LOGIN] Requiring 2FA for "${rawTrimmed}"`);
         // @ts-ignore
         req.session.pending2FAUserId = user.id;
         return res.status(200).json({ requires2FA: true, userId: user.id });
@@ -195,7 +208,7 @@ export async function registerRoutes(
 
       // @ts-ignore
       req.session.userId = user.id;
-      console.log(`[LOGIN] Login successful for "${username}", session userId set to ${user.id}`);
+      console.log(`[LOGIN] Login successful for "${rawTrimmed}", session userId set to ${user.id}`);
       const { password: _, totpSecret: _s, ...safeUser } = user;
       res.json(safeUser);
     } catch (err) {
