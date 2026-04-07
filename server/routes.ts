@@ -1661,30 +1661,12 @@ export async function registerRoutes(
     res.json({ url: getPolygonscanBaseUrl() });
   });
 
+  /* LEGACY ADMIN ROUTE - Polygon/L1 deployment currently disabled in favor of Native DIELBS
   app.post("/api/admin/deploy-token", async (req, res) => {
-    // @ts-ignore
-    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
-    // @ts-ignore
-    const user = await storage.getUser(req.session.userId);
-    if (!user || !user.isDev) {
-      return res.status(403).json({ message: "Admin access required" });
-    }
-
-    const deployerKey = process.env.DEPLOYER_PRIVATE_KEY;
-    if (!deployerKey) {
-      return res.status(500).json({ message: "Deployer key not configured on server" });
-    }
-
-    try {
-      const { deployToken, setContractAddress: setAddr } = await import("./blockchain");
-      const contractAddr = await deployToken(deployerKey);
-      setAddr(contractAddr);
-      res.json({ success: true, contractAddress: contractAddr });
-    } catch (err: any) {
-      console.error("Deploy error:", err);
-      res.status(500).json({ message: "Deployment failed: " + (err.message || "Unknown error") });
-    }
+    // ... logic disabled
+    res.status(501).json({ message: "Native DIELBS engine is already live. Token deployment not required." });
   });
+  */
 
   // === Stripe / Buy WEBD Routes ===
 
