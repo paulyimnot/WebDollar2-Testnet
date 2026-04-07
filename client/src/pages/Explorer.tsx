@@ -158,181 +158,56 @@ export default function Explorer() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-8">
-        <CyberCard title="WEBD2 NETWORK BLOCKS" className="min-h-[500px]">
-          {blocksLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin text-primary/50" />
-              <span className="ml-2 font-mono text-sm text-muted-foreground">Fetching blocks...</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full font-mono text-sm text-left">
-                <thead>
-                  <tr className="border-b border-primary/30 text-primary/70">
-                    <th className="py-3 px-2">BLOCK</th>
-                    <th className="py-3 px-2">HASH</th>
-                    <th className="py-3 px-2">TXS</th>
-                    <th className="py-3 px-2 text-right">AGE</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-primary/10">
-                  {polygonBlocks?.blocks?.map((block: any) => (
-                    <tr key={block.number} className="hover:bg-primary/5 transition-colors" data-testid={`polygon-block-${block.number}`}>
-                      <td className="py-3 px-2">
-                        <a
-                          href={`${scanUrl}/block/${block.number}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-accent font-bold hover:underline flex items-center gap-1"
-                          data-testid={`link-block-${block.number}`}
-                        >
-                          #{block.number.toLocaleString()}
-                          <ExternalLink className="w-3 h-3 opacity-50" />
-                        </a>
-                      </td>
-                      <td className="py-3 px-2 text-muted-foreground">{block.hash.substring(0, 12)}...</td>
-                      <td className="py-3 px-2 text-purple-400">{block.transactionCount}</td>
-                      <td className="py-3 px-2 text-right text-muted-foreground">
-                        {formatDistanceToNow(new Date(block.timestamp * 1000), { addSuffix: true })}
-                      </td>
-                    </tr>
-                  ))}
-                  {(!polygonBlocks?.blocks || polygonBlocks.blocks.length === 0) && (
-                    <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">Connecting to WebDollar 2 Testnet...</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <div className="mt-4 text-center">
-            <Button variant="outline" size="sm" className="font-mono text-xs" disabled>
-              <Blocks className="w-3 h-3 mr-1" /> NETWORK SYNCED
-            </Button>
-          </div>
-        </CyberCard>
-
-        <CyberCard title="WEBD2 NETWORK TRANSACTIONS" className="min-h-[500px]">
-          {txsLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin text-primary/50" />
-              <span className="ml-2 font-mono text-sm text-muted-foreground">Fetching transactions...</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full font-mono text-sm text-left">
-                <thead>
-                  <tr className="border-b border-primary/30 text-primary/70">
-                    <th className="py-3 px-2">TX HASH</th>
-                    <th className="py-3 px-2">FROM / TO</th>
-                    <th className="py-3 px-2 text-right">VALUE (WEBD2)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-primary/10">
-                  {polygonTxs?.transactions?.map((tx: any, idx: number) => (
-                    <tr key={`${tx.hash}-${idx}`} className="hover:bg-primary/5 transition-colors" data-testid={`polygon-tx-${idx}`}>
-                      <td className="py-3 px-2">
-                        <a
-                          href={`${scanUrl}/tx/${tx.hash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-accent hover:underline flex items-center gap-1"
-                          data-testid={`link-tx-${idx}`}
-                        >
-                          {tx.hash.substring(0, 14)}...
-                          <ExternalLink className="w-3 h-3 opacity-50" />
-                        </a>
-                      </td>
-                      <td className="py-3 px-2 text-muted-foreground">
-                        <div className="flex flex-col">
-                          <a
-                            href={`${scanUrl}/address/${tx.from}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="truncate max-w-[200px] hover:text-purple-400 transition-colors text-base"
-                          >
-                            {tx.from.substring(0, 14)}...{tx.from.substring(36)}
-                          </a>
-                          <span className="text-sm opacity-50">to</span>
-                          {tx.to ? (
-                            <a
-                              href={`${scanUrl}/address/${tx.to}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="truncate max-w-[200px] hover:text-purple-400 transition-colors text-base"
-                            >
-                              {tx.to.substring(0, 14)}...{tx.to.substring(36)}
-                            </a>
-                          ) : (
-                            <span className="text-accent text-xs">CONTRACT CREATE</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-right text-accent font-bold">
-                        {parseFloat(tx.value).toFixed(4)}
-                      </td>
-                    </tr>
-                  ))}
-                  {(!polygonTxs?.transactions || polygonTxs.transactions.length === 0) && (
-                    <tr><td colSpan={3} className="py-8 text-center text-muted-foreground">Fetching transactions...</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <div className="mt-4 text-center">
-            <Button variant="outline" size="sm" className="font-mono text-xs" disabled>
-              <ArrowRightLeft className="w-3 h-3 mr-1" /> LEDGER IMMUTABLE
-            </Button>
-          </div>
-        </CyberCard>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-8">
-        <CyberCard title="INTERNAL WEBD2 BLOCKS" className="min-h-[400px]">
+        <CyberCard title="LATEST NETWORK BLOCKS" className="min-h-[500px]">
           <div className="overflow-x-auto">
             <table className="w-full font-mono text-sm text-left">
               <thead>
                 <tr className="border-b border-primary/30 text-primary/70">
-                  <th className="py-3 px-2">HEIGHT</th>
-                  <th className="py-3 px-2">HASH</th>
-                  <th className="py-3 px-2">MINER</th>
-                  <th className="py-3 px-2 text-right">TIME</th>
+                  <th className="py-3 px-2 text-[10px] tracking-widest uppercase opacity-50 font-black">HEIGHT</th>
+                  <th className="py-3 px-2 text-[10px] tracking-widest uppercase opacity-50 font-black">BLOCK HASH</th>
+                  <th className="py-3 px-2 text-[10px] tracking-widest uppercase opacity-50 font-black">VALIDATOR</th>
+                  <th className="py-3 px-2 text-right text-[10px] tracking-widest uppercase opacity-50 font-black">TIME</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/10">
                 {blocks?.map((block: any) => (
                   <tr key={block.id} className="hover:bg-primary/5 transition-colors" data-testid={`block-row-${block.id}`}>
-                    <td className="py-3 px-2 text-accent font-bold">#{block.id}</td>
-                    <td className="py-3 px-2 text-muted-foreground">{block.hash.substring(0, 12)}...</td>
-                    <td className="py-3 px-2 text-muted-foreground text-base truncate max-w-[200px]">{block.minerAddress ? `${block.minerAddress.substring(0, 20)}...` : `Miner #${block.minerId}`}</td>
-                    <td className="py-3 px-2 text-right text-muted-foreground">
+                    <td className="py-3 px-2 text-accent font-black">#{block.id}</td>
+                    <td className="py-3 px-2 text-white/80 font-mono text-xs md:text-sm">{block.hash.substring(0, 16)}...</td>
+                    <td className="py-3 px-2 text-primary/70 text-xs md:text-sm truncate max-w-[150px]">{block.minerAddress ? `${block.minerAddress.substring(0, 12)}...` : `DIELBS-NODE #${block.minerId}`}</td>
+                    <td className="py-3 px-2 text-right text-muted-foreground text-xs">
                       {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
                     </td>
                   </tr>
                 ))}
                 {(!blocks || blocks.length === 0) && (
-                  <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No WEBD blocks yet. Start mining to create blocks.</td></tr>
+                  <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No blocks detected. Start mining to generate native DIELBS blocks.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+          <div className="mt-4 text-center">
+            <Button variant="outline" size="sm" className="font-mono text-[10px] opacity-70 tracking-widest" disabled>
+              <Blocks className="w-3 h-3 mr-2" /> DIELBS CONSENSUS LIVE
+            </Button>
+          </div>
         </CyberCard>
 
-        <CyberCard title="INTERNAL WEBD2 TRANSACTIONS" className="min-h-[400px]">
+        <CyberCard title="LATEST NETWORK TRANSACTIONS" className="min-h-[500px]">
           <div className="overflow-x-auto">
             <table className="w-full font-mono text-sm text-left">
               <thead>
                 <tr className="border-b border-primary/30 text-primary/70">
-                  <th className="py-3 px-2">TYPE</th>
-                  <th className="py-3 px-2">FROM / TO</th>
-                  <th className="py-3 px-2 text-right">AMOUNT</th>
+                  <th className="py-3 px-2 text-[10px] tracking-widest uppercase opacity-50 font-black">METHOD</th>
+                  <th className="py-3 px-2 text-[10px] tracking-widest uppercase opacity-50 font-black">FROM / TO PATHWAY</th>
+                  <th className="py-3 px-2 text-right text-[10px] tracking-widest uppercase opacity-50 font-black">QUANTITY</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/10">
                 {transactions?.map((tx: any) => (
                   <tr key={tx.id} className="hover:bg-primary/5 transition-colors" data-testid={`tx-row-${tx.id}`}>
                     <td className="py-3 px-2">
-                      <span className={`px-2 py-0.5 text-[10px] uppercase border rounded-sm ${
+                      <span className={`px-2 py-0.5 text-[9px] font-black uppercase border rounded-sm ${
                         tx.type === 'mining_reward' ? 'border-accent text-accent' :
                         tx.type === 'conversion' ? 'border-yellow-500 text-yellow-500' :
                         'border-primary text-primary'
@@ -342,21 +217,30 @@ export default function Explorer() {
                     </td>
                     <td className="py-3 px-2 text-muted-foreground">
                       <div className="flex flex-col">
-                        <span className="truncate max-w-[250px] text-base">{tx.senderAddress ? `${tx.senderAddress.substring(0, 22)}...` : 'COINBASE'}</span>
-                        <span className="text-sm opacity-50">to</span>
-                        <span className="truncate max-w-[250px] text-base">{tx.receiverAddress ? `${tx.receiverAddress.substring(0, 22)}...` : `User #${tx.receiverId}`}</span>
+                        <span className="truncate max-w-[200px] text-white/80 font-mono text-xs">{tx.senderAddress ? `${tx.senderAddress.substring(0, 16)}...` : 'NATIVE_MINT'}</span>
+                        <div className="flex items-center gap-1 opacity-30 my-0.5">
+                          <div className="h-[1px] flex-1 bg-primary/50" />
+                          <span className="text-[10px]">ROUTE</span>
+                          <div className="h-[1px] flex-1 bg-primary/50" />
+                        </div>
+                        <span className="truncate max-w-[200px] text-white/80 font-mono text-xs">{tx.receiverAddress ? `${tx.receiverAddress.substring(0, 16)}...` : `NODE #${tx.receiverId}`}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-2 text-right text-accent font-bold">
-                      {Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 4 })} WEBD2
+                    <td className="py-3 px-2 text-right text-accent font-black text-sm">
+                      {Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 4 })} <span className="text-[10px] opacity-50">WEBD2</span>
                     </td>
                   </tr>
                 ))}
                 {(!transactions || transactions.length === 0) && (
-                  <tr><td colSpan={3} className="py-8 text-center text-muted-foreground">No WEBD transactions yet...</td></tr>
+                  <tr><td colSpan={3} className="py-8 text-center text-muted-foreground">Monitoring network for inbound transactions...</td></tr>
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="mt-4 text-center">
+            <Button variant="outline" size="sm" className="font-mono text-[10px] opacity-70 tracking-widest" disabled>
+              <ArrowRightLeft className="w-3 h-3 mr-2" /> LEDGER IMMUTABLE
+            </Button>
           </div>
         </CyberCard>
       </div>
