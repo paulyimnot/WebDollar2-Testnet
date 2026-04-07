@@ -45,6 +45,7 @@ export default function Wallet() {
       const res = await fetch("/api/alias/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ alias: customAlias, isAliasActive: currentActive }),
       });
       const data = await res.json();
@@ -65,6 +66,7 @@ export default function Wallet() {
       const res = await fetch("/api/alias/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ alias: (user as any)?.alias || null, isAliasActive: !currentActive }),
       });
       const data = await res.json();
