@@ -64,6 +64,7 @@ export interface IStorage {
   getCardWaitlistEntry(userId: number): Promise<CardWaitlistEntry | undefined>;
   getCardWaitlistCount(): Promise<number>;
   getAllCardWaitlistEntries(): Promise<any[]>;
+  getUserRewardStats(userId: number): Promise<{ totalRewardsEarned: string; rewardsCount: number; lastRewardAmount: string }>;
 
 }
 
@@ -415,6 +416,31 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(cardWaitlist.userId, users.id))
       .orderBy(cardWaitlist.id);
     return entries;
+  }
+
+  async getUserRewardStats(userId: number): Promise<{ totalRewardsEarned: string; rewardsCount: number; lastRewardAmount: string }> {
+    const [stats] = await db.select({
+      total: sql<string>`COALESCE(SUM(amount::numeric), 0)`,
+      count: sql<number>`count(*)`,
+    }).from(transactions)
+      .where(and(
+        eq(transactions.receiverId, userId),
+        or(eq(transactions.type, "staking_reward"), eq(transactions.type, "mining_reward"))
+      ));
+    
+    const [lastTx] = await db.select().from(transactions)
+      .where(and(
+        eq(transactions.receiverId, userId),
+        or(eq(transactions.type, "staking_reward"), eq(transactions.type, "mining_reward"))
+      ))
+      .orderBy(desc(transactions.id))
+      .limit(1);
+
+    return {
+      totalRewardsEarned: stats?.total || "0.0000",
+      rewardsCount: Number(stats?.count || 0),
+      lastRewardAmount: lastTx?.amount || "0.0000"
+    };
   }
 
 }

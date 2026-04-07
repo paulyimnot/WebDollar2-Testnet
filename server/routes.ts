@@ -1013,12 +1013,11 @@ export async function registerRoutes(
     const blocksList = await storage.getBlocks(1000);
     const totalMined = blocksList.reduce((sum: number, b: any) => sum + parseFloat(b.reward || "0"), 0);
 
-    // Calculate total rewards ever earned by this user
-    const userTxs = await storage.getUserTransactions(user.id);
-    const rewardTxs = userTxs.filter((tx: any) => (tx.type === "staking_reward" || tx.type === "mining_reward") && tx.receiverId === user.id);
-    const totalRewardsEarned = rewardTxs.reduce((sum: number, tx: any) => sum + parseFloat(tx.amount || "0"), 0);
-    const lastRewardAmount = rewardTxs.length > 0 ? parseFloat(rewardTxs[rewardTxs.length - 1].amount || "0") : 0;
-    const rewardsCount = rewardTxs.length;
+    // Calculate total rewards ever earned by this user using efficient aggregation
+    const rewardStats = await storage.getUserRewardStats(user.id);
+    const totalRewardsEarned = rewardStats.totalRewardsEarned;
+    const lastRewardAmount = rewardStats.lastRewardAmount;
+    const rewardsCount = rewardStats.rewardsCount;
 
     res.json({
       stakedBalance: userStaked.toFixed(4),
