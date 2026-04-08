@@ -1040,8 +1040,8 @@ export async function registerRoutes(
       stakingStoppedAt: stakingStoppedAt ? new Date(stakingStoppedAt).toISOString() : null,
       holdRemainingMs,
       isOnHold,
-      totalRewardsEarned: totalRewardsEarned.toFixed(4),
-      lastRewardAmount: lastRewardAmount.toFixed(4),
+      totalRewardsEarned: Number(totalRewardsEarned).toFixed(4),
+      lastRewardAmount: Number(lastRewardAmount).toFixed(4),
       rewardsCount,
     });
   });
@@ -1062,91 +1062,102 @@ export async function registerRoutes(
   app.post(api.staking.stake.path, async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
-    // @ts-ignore
-    const user = await storage.getUser(req.session.userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    // Block starting if user is on 7-day hold
-    if (user.stakingStoppedAt) {
-      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-      const elapsed = Date.now() - new Date(user.stakingStoppedAt).getTime();
-      if (elapsed < SEVEN_DAYS_MS) {
-        return res.status(400).json({ message: "Your previous stake is on a 7-day hold. Please wait until the hold period expires." });
-      }
-      // Hold expired, clear it
-      // @ts-ignore
-      await db.update(users).set({ stakingStoppedAt: null }).where(eq(users.id, user.id));
-    }
-
-    const { amount } = req.body;
-    const stakeAmount = parseFloat(amount);
-    if (isNaN(stakeAmount) || stakeAmount < MIN_STAKE_AMOUNT) {
-      return res.status(400).json({ message: `Minimum stake amount is ${MIN_STAKE_AMOUNT} WEBD` });
-    }
-
-    const availableBalance = parseFloat(user.balance || "0");
-    if (stakeAmount > availableBalance) {
-      return res.status(400).json({ message: "Insufficient balance to stake" });
-    }
-
-    const currentStaked = parseFloat(user.stakedBalance || "0");
-    const newBalance = (availableBalance - stakeAmount).toFixed(4);
-    const newStakedBalance = (currentStaked + stakeAmount).toFixed(4);
-
-    await storage.updateUserStake(user.id, newStakedBalance, newBalance, new Date());
     
-    // Create a transaction record for the stake
-    await storage.createTransaction({
-      senderId: user.id,
-      receiverId: null,
-      senderAddress: user.walletAddress,
-      receiverAddress: "STAKING_CONTRACT",
-      amount: stakeAmount.toFixed(4),
-      type: "transfer", // Using transfer as it's a movement to stake
-      blockId: null
-    });
+    try {
+      // Use a fresh query to avoid stale session data
+      // @ts-ignore
+      const user = await storage.getUser(req.session.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
 
-    const minerWalletAddr = await storage.getWalletAddressByAddress(user.walletAddress!);
-    if (minerWalletAddr) {
-      const addrBalance = parseFloat(minerWalletAddr.balance || "0");
-      const newAddrBalance = Math.max(0, addrBalance - stakeAmount).toFixed(4);
-      await storage.updateWalletAddressBalance(minerWalletAddr.id, newAddrBalance);
+      if (user.stakingStoppedAt) {
+        const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+        const elapsed = Date.now() - new Date(user.stakingStoppedAt).getTime();
+        if (elapsed < SEVEN_DAYS_MS) {
+          return res.status(400).json({ message: "Your previous stake is on a 7-day hold. Please wait until the hold period expires." });
+        }
+        await db.update(users).set({ stakingStoppedAt: null }).where(eq(users.id, user.id));
+      }
+
+      const { amount } = req.body;
+      const stakeAmount = parseFloat(amount);
+      if (isNaN(stakeAmount) || stakeAmount < MIN_STAKE_AMOUNT) {
+        return res.status(400).json({ message: `Minimum stake amount is ${MIN_STAKE_AMOUNT} WEBD` });
+      }
+
+      const availableBalance = parseFloat(user.balance || "0");
+      if (stakeAmount > availableBalance) {
+        return res.status(400).json({ message: "Insufficient balance to stake" });
+      }
+
+      const currentStaked = parseFloat(user.stakedBalance || "0");
+      const newBalance = (availableBalance - stakeAmount).toFixed(4);
+      const newStakedBalance = (currentStaked + stakeAmount).toFixed(4);
+
+      console.log(`[STAKE] User ${user.id} staking ${stakeAmount}. New Staked: ${newStakedBalance}`);
+
+      // ATOMIC UPDATE
+      await storage.updateUserStake(user.id, newStakedBalance, newBalance, new Date());
+      
+      await storage.createTransaction({
+        senderId: user.id,
+        receiverId: null,
+        senderAddress: user.walletAddress,
+        receiverAddress: "STAKING_CONTRACT",
+        amount: stakeAmount.toFixed(4),
+        type: "transfer",
+        blockId: null,
+      });
+
+      const minerWalletAddr = await storage.getWalletAddressByAddress(user.walletAddress!);
+      if (minerWalletAddr) {
+        const addrBalance = parseFloat(minerWalletAddr.balance || "0");
+        const newAddrBalance = Math.max(0, addrBalance - stakeAmount).toFixed(4);
+        await storage.updateWalletAddressBalance(minerWalletAddr.id, newAddrBalance);
+      }
+
+      res.json({
+        success: true,
+        stakedBalance: newStakedBalance,
+        message: `Mining started with ${stakeAmount.toLocaleString()} WEBD. Total mining power: ${Number(newStakedBalance).toLocaleString()} WEBD.`,
+      });
+    } catch (err: any) {
+      console.error("[STAKE] Error:", err);
+      res.status(500).json({ message: "Mining start failed: " + (err.message || "Unknown error") });
     }
-
-    res.json({
-      success: true,
-      stakedBalance: newStakedBalance,
-      message: `Successfully staked ${stakeAmount.toFixed(4)} WEBD. Mining is now ACTIVE.`,
-    });
   });
 
   // STOP MINING — triggers 7-day hold, does NOT return funds immediately
   app.post(api.staking.unstake.path, async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
-    // @ts-ignore
-    const user = await storage.getUser(req.session.userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    
+    try {
+      // @ts-ignore
+      const user = await storage.getUser(req.session.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
 
-    const currentStaked = parseFloat(user.stakedBalance || "0");
-    if (currentStaked <= 0) {
-      return res.status(400).json({ message: "No active stake to stop" });
+      const currentStaked = parseFloat(user.stakedBalance || "0");
+      if (currentStaked <= 0) {
+        return res.status(400).json({ message: "No active stake to stop" });
+      }
+
+      if (user.stakingStoppedAt) {
+        return res.status(400).json({ message: "Mining is already stopped. Your funds are on a 7-day hold." });
+      }
+
+      console.log(`[UNSTAKE] User ${user.id} stopping mining. Holding: ${currentStaked}`);
+
+      await db.update(users).set({ stakingStoppedAt: new Date() }).where(eq(users.id, user.id));
+
+      res.json({
+        success: true,
+        stakedBalance: currentStaked.toFixed(4),
+        message: `Mining stopped. Your ${currentStaked.toFixed(4)} WEBD will be held for 7 days before being returned to your balance.`,
+      });
+    } catch (err: any) {
+      console.error("[UNSTAKE] Error:", err);
+      res.status(500).json({ message: "Stop mining failed: " + (err.message || "Unknown error") });
     }
-
-    // Already on hold?
-    if (user.stakingStoppedAt) {
-      return res.status(400).json({ message: "Mining is already stopped. Your funds are on a 7-day hold." });
-    }
-
-    // Set the stopped timestamp — funds remain locked for 7 days
-    // @ts-ignore
-    await db.update(users).set({ stakingStoppedAt: new Date() }).where(eq(users.id, user.id));
-
-    res.json({
-      success: true,
-      stakedBalance: currentStaked.toFixed(4),
-      message: `Mining stopped. Your ${currentStaked.toFixed(4)} WEBD will be held for 7 days before being returned to your balance.`,
-    });
   });
 
   // CHANGE STAKING AMOUNT (does NOT trigger 7-day hold — only active miners)
