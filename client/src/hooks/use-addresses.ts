@@ -13,6 +13,7 @@ export function useAddresses() {
       if (!res.ok) throw new Error("Failed to fetch addresses");
       return await res.json();
     },
+    refetchInterval: 5000,
   });
 
   const createMutation = useMutation({

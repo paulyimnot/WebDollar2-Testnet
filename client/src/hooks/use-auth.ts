@@ -16,6 +16,7 @@ export function useAuth() {
       if (!res.ok) throw new Error("Failed to fetch user");
       return await res.json();
     },
+    refetchInterval: 5000,
     retry: false,
   });
 
