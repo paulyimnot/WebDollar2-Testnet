@@ -1503,8 +1503,15 @@ export async function registerRoutes(
     try {
       const status = await checkConnection();
       const tokenAddress = getContractAddress();
-      // Force native WEBD2 network UI display override
-      res.json({ ...status, network: "WEBD2 Testnet", tokenContract: tokenAddress });
+      const latestBlock = await storage.getLatestBlock();
+      
+      // Force native WEBD2 network UI display override with LIVE block height
+      res.json({ 
+        ...status, 
+        network: "WEBD2 Testnet", 
+        tokenContract: tokenAddress,
+        blockNumber: latestBlock?.id || 1
+      });
     } catch (err: any) {
       res.json({ connected: false, network: "Unknown", chainId: null, blockNumber: null, tokenContract: null });
     }
