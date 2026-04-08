@@ -24,20 +24,20 @@ app.use(compression());
 
 // 🚫 SPAM PROTECTION (Global)
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 600, // Mainnet Limit: 600 requests per 15 mins (Accommodates 5s Miner polling)
+  windowMs: 15 * 60 * 1000, 
+  max: 2000, // Stress Test: High limit for active testers
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: "Mainnet Security: Too many requests from this IP. Rate limited for 15 minutes." }
+  message: { message: "Stress Test: Too many requests. Relaxing in a few minutes..." }
 });
 
 // Apply stricter limits to Auth/Faucet
 const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // Strict Mainnet Auth Limit: 10 total attempts per hour
+  windowMs: 60 * 60 * 1000, 
+  max: 100, // Stress Test: Allow account switching and testing
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: "Mainnet Security: Too many authentication attempts. Try again in an hour." }
+  message: { message: "Stress Test: Authentication limit reached. Please wait a bit." }
 });
 
 app.use("/api/auth/register", authLimiter);
