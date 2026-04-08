@@ -23,6 +23,21 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   const [location] = useLocation();
+  const [announcement, setAnnouncement] = useState(() => localStorage.getItem("webd2_announcement") || "");
+
+  // Listen for storage changes to update the banner across tabs
+  useEffect(() => {
+    const handleStorage = () => {
+      setAnnouncement(localStorage.getItem("webd2_announcement") || "");
+    };
+    window.addEventListener("storage", handleStorage);
+    // Also poll slightly for local-tab updates
+    const interval = setInterval(handleStorage, 2000);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Render standalone 'ecosystem' apps without the main WebDollar 2 navbar/footer
   if (location === "/faucet") {
@@ -37,6 +52,20 @@ function Router() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
+      {announcement && (
+        <div className="bg-accent text-black py-2 px-4 text-center font-mono text-sm font-black tracking-widest relative z-[60] shadow-[0_4px_20px_rgba(255,193,44,0.3)] animate-pulse">
+          <span className="mr-2">📢</span> OPERATOR ANNOUNCEMENT: {announcement.toUpperCase()}
+          <button 
+            onClick={() => {
+              localStorage.removeItem("webd2_announcement");
+              setAnnouncement("");
+            }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-black/50 hover:text-black"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <Navbar />
       <main className="flex-grow">
         <Switch>

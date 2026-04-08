@@ -16,7 +16,17 @@ export default function Admin() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [customAmounts, setCustomAmounts] = useState<Record<number, string>>({});
+   const [customAmounts, setCustomAmounts] = useState<Record<number, string>>({});
+   const [announcement, setAnnouncement] = useState(() => localStorage.getItem("webd2_announcement") || "");
+
+   const handleSaveAnnouncement = () => {
+     localStorage.setItem("webd2_announcement", announcement);
+     toast({ 
+       title: "ANNOUNCEMENT BROADCASTED", 
+       description: "Global announcement banner updated.",
+       className: "border-accent text-accent bg-black font-mono shadow-[0_0_20px_rgba(255,193,44,0.3)]"
+     });
+   };
 
   const { data: conversions, isLoading } = useQuery({
     queryKey: [api.admin.conversions.list.path],
@@ -304,8 +314,32 @@ export default function Admin() {
             </div>
           </>
         )}
-      </CyberCard>
+       </CyberCard>
 
+      <CyberCard title="BROADCAST CENTER" className="mt-8 border-accent/30 shadow-[0_0_20px_rgba(255,193,44,0.05)]">
+        <div className="space-y-4">
+          <div>
+            <label className="text-[10px] font-mono text-accent block mb-2 uppercase tracking-[0.2em] font-black">GLOBAL ANNOUNCEMENT BANNER</label>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Input 
+                placeholder="Type global news or system alerts here..."
+                value={announcement}
+                onChange={e => setAnnouncement(e.target.value)}
+                className="bg-background border-primary/20 text-white font-mono flex-1"
+              />
+              <Button 
+                onClick={handleSaveAnnouncement}
+                className="btn-gold whitespace-nowrap px-8"
+              >
+                BROADCAST
+              </Button>
+            </div>
+          </div>
+          <p className="text-[10px] font-mono text-muted-foreground italic border-l-2 border-accent/20 pl-4 bg-accent/5 p-2 rounded-sm">
+            * BROADCAST MODE: This message will propagate across all synchronized network nodes on this browser instance. Use for critical stress-test alerts or migration updates.
+          </p>
+        </div>
+      </CyberCard>
     </div>
   );
 }

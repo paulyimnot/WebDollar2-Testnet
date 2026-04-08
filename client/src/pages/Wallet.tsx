@@ -25,6 +25,7 @@ export default function Wallet() {
 
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
+  const [txPassword, setTxPassword] = useState("");
   const [copied, setCopied] = useState<string | boolean>(false);
   const [showQR, setShowQR] = useState(false);
   const [revealedPhrase, setRevealedPhrase] = useState<{ id: number; mnemonic: string; address: string; publicKey: string } | null>(null);
@@ -167,7 +168,7 @@ export default function Wallet() {
         const resp = await fetch('/api/wallet/transfer/private', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ recipientAddress: finalRecipient, amount }),
+          body: JSON.stringify({ recipientAddress: finalRecipient, amount, password: txPassword }),
           credentials: 'include'
         });
         if (resp.ok) {
@@ -178,6 +179,7 @@ export default function Wallet() {
           toast({ title: "PRIVATE TRANSFER CONFIRMED", description: `Sent ${amount} WD2 privately.`, className: "border-accent text-accent bg-card font-mono" });
           setRecipient("");
           setAmount("");
+          setTxPassword("");
         } else {
           const err = await resp.json().catch(() => ({ message: "Transfer failed" }));
           toast({ title: "TRANSFER FAILED", description: err.message, variant: "destructive", className: "font-mono" });
@@ -186,10 +188,11 @@ export default function Wallet() {
         toast({ title: "TRANSFER FAILED", description: "Network error.", variant: "destructive", className: "font-mono" });
       }
     } else {
-      // Normal transfer — original logic, completely untouched
-      transfer({ recipientAddress: finalRecipient, amount });
+      // Normal transfer — signed logic
+      transfer({ recipientAddress: finalRecipient, amount, password: txPassword });
       setRecipient("");
       setAmount("");
+      setTxPassword("");
     }
   };
 
@@ -399,9 +402,25 @@ export default function Wallet() {
               data-testid="input-amount"
             />
           </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest flex items-center gap-2">
+              <KeyRound className="w-3 h-3 text-accent" /> Transaction Secret
+            </label>
+            <Input 
+              type="password" 
+              placeholder="Unlock wallet to sign" 
+              value={txPassword}
+              onChange={(e) => setTxPassword(e.target.value)}
+              className="bg-input border-primary/20 font-mono py-6"
+            />
+            <p className="text-[10px] text-muted-foreground font-mono italic">
+              * Required to mathematically sign this transaction using your private key.
+            </p>
+          </div>
           <Button
             className={`w-full flex justify-between items-center group ${isPrivate ? 'btn-neon-filled border-accent' : 'btn-neon'}`}
-            disabled={isTransferring || isResolvingAlias || !amount || !recipient}
+            disabled={isTransferring || isResolvingAlias || !amount || !recipient || !txPassword}
             onClick={handleTransfer}
             data-testid="button-transfer"
           >

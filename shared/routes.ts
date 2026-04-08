@@ -78,7 +78,12 @@ export const api = {
     transfer: {
       method: 'POST' as const,
       path: '/api/wallet/transfer' as const,
-      input: z.object({ recipientAddress: z.string(), amount: z.string() }),
+      input: z.object({ 
+        recipientAddress: z.string(), 
+        amount: z.string(),
+        signature: z.string().optional(), // Optional for now to transition, but will be enforced
+        nonce: z.number().optional() 
+      }),
       responses: { 200: z.custom<typeof transactions.$inferSelect>(), 400: errorSchemas.validation, 401: errorSchemas.unauthorized },
     },
     addresses: {

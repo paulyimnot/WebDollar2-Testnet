@@ -10,12 +10,33 @@ import helmet from "helmet";
 import compression from "compression";
 import { rateLimit } from "express-rate-limit";
 
+// 🛡️ WAVE 1: CRITICAL STARTUP VALIDATION
+if (!process.env.SESSION_SECRET) {
+  console.error("❌ FATAL: SESSION_SECRET is not set. Application aborted for security.");
+  process.exit(1);
+}
+if (!process.env.DATABASE_URL) {
+  console.error("❌ FATAL: DATABASE_URL is not set. Database integration required.");
+  process.exit(1);
+}
+
 const app = express();
 const httpServer = createServer(app);
 
-// 🛡️ SECURITY SHIELD
+// 🛡️ SECURITY SHIELD: HELMET CSP HARDENING
 app.use(helmet({
-  contentSecurityPolicy: false, // Disabled to allow external CDN/Replit assets if needed
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https:", "http:"],
+      connectSrc: ["'self'", "wss:", "ws:", "https://webdollar2.onrender.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
   crossOriginEmbedderPolicy: false,
 }));
 
@@ -40,9 +61,19 @@ const authLimiter = rateLimit({
   message: { message: "Stress Test: Authentication limit reached. Please wait a bit." }
 });
 
+const financialLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, 
+  max: 10, // Max 10 transfers per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Security: Transfer frequency limit reached. Please wait 60 seconds." }
+});
+
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/wallet/testnet-faucet", authLimiter);
+app.use("/api/wallet/transfer", financialLimiter);
+app.use("/api/wallet/transfer/private", financialLimiter);
 app.use("/api/", globalLimiter);
 
 declare module "http" {
@@ -143,7 +174,9 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
+      
+      // 🛡️ WAVE 1: REMOVE SENSITIVE LOGGING IN PRODUCTION
+      if (process.env.NODE_ENV !== "production" && capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 

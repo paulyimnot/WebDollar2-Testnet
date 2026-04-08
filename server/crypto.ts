@@ -64,3 +64,21 @@ export function decryptPrivateKey(encryptedKey: string, password: string): strin
 export function hashBlock(input: string, _timestamp?: number, _data?: string, _nonce?: number): string {
   return sha256Hex(input);
 }
+
+export function signMessage(message: string, privateKeyHex: string): string {
+  const msgHash = sha256Hex(message);
+  const sig = secp256k1.signSync(msgHash, privateKeyHex);
+  return Buffer.from(sig).toString("hex");
+}
+
+export function verifySignature(message: string, signature: string, publicKey: string): boolean {
+  try {
+    const msgHash = sha256Hex(message);
+    const signatureBytes = Buffer.from(signature, "hex");
+    const publicKeyBytes = Buffer.from(publicKey, "hex");
+    return secp256k1.verify(signatureBytes, msgHash, publicKeyBytes);
+  } catch (e) {
+    console.error("Signature verification error:", e);
+    return false;
+  }
+}

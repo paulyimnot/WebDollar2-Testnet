@@ -4,9 +4,9 @@ import { storage } from "./storage.js";
 import { api, helpChatInputSchema } from "../shared/routes.js";
 import { z } from "zod";
 import session from "express-session";
-import MemoryStore from "memorystore";
+import pgSession from "connect-pg-simple";
 import bcrypt from "bcrypt";
-import { generateWallet, encryptPrivateKey, deriveKeyPair } from "./crypto.js";
+import { generateWallet, encryptPrivateKey, deriveKeyPair, verifySignature } from "./crypto.js";
 import { createHash } from "crypto";
 import { checkConnection, getContractAddress, getOnChainBalance, getMaticBalance, getPolygonscanBaseUrl, getRecentBlocks, getRecentTransactionsFromBlock } from "./blockchain.js";
 import { db } from "./db.js";
@@ -16,7 +16,8 @@ import * as OTPAuth from "otpauth";
 import QRCode from "qrcode";
 import OpenAI from "openai";
 
-const SessionStore = MemoryStore(session);
+const PostgresStore = pgSession(session);
+import { pool } from "./db.js";
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const faucetIpStamps = new Map<string, number>();
@@ -57,8 +58,24 @@ export async function registerRoutes(
     next();
   });
 
+  // 🛡️ WAVE 1: PERSISTENT POSTGRES SESSIONS
+  // Ensure session table exists (Audit Point 4)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "session" (
+      "sid" varchar NOT NULL COLLATE "default",
+      "sess" json NOT NULL,
+      "expire" timestamp(6) NOT NULL
+    ) WITH (OIDS=FALSE);
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey') THEN
+        ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+      END IF;
+    END $$;
+    CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+  `);
+
   app.use(session({
-    secret: process.env.SESSION_SECRET || "dev_secret_webdollar2",
+    secret: process.env.SESSION_SECRET!, 
     resave: false,
     saveUninitialized: false,
     name: 'wd2_session',
@@ -69,7 +86,11 @@ export async function registerRoutes(
       httpOnly: true,
       sameSite: 'none',
     },
-    store: new SessionStore({ checkPeriod: 86400000 }),
+    store: new PostgresStore({
+      pool: pool,
+      tableName: 'session',
+      createTableIfMissing: false // We handled it manually for precision
+    }),
   }));
 
   // === Auth Routes ===
@@ -668,6 +689,27 @@ export async function registerRoutes(
     res.json(safeUser);
   });
 
+  // 🛡️ WAVE 1: SECURE SIGNING PREFLIGHT
+  app.get("/api/wallet/sign-preflight", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const userId = req.session.userId;
+    const user = await storage.getUser(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const addresses = await storage.getWalletAddresses(userId);
+    const primary = addresses.find(a => a.isPrimary) || addresses[0];
+
+    if (!primary) return res.status(404).json({ message: "Primary wallet not found" });
+
+    res.json({
+      encryptedPrivateKey: primary.encryptedPrivateKey,
+      publicKey: primary.publicKey,
+      nonce: user.nonce,
+    });
+  });
+
   app.post(api.wallet.transfer.path, async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
@@ -691,6 +733,32 @@ export async function registerRoutes(
     const sender = await storage.getUser(req.session.userId);
     if (!sender) return res.status(401).json({ message: "User not found" });
 
+    // 🛡️ WAVE 1: CRITICAL SIGNATURE VERIFICATION (Audit Point 10)
+    const { signature, nonce } = req.body;
+    if (!signature || nonce === undefined) {
+      return res.status(400).json({ message: "Transaction must be signed with a valid cryptographic signature." });
+    }
+
+    // Verify nonce first for replay protection
+    if (nonce !== sender.nonce) {
+      return res.status(400).json({ message: `Invalid network nonce. Expected ${sender.nonce}, got ${nonce}.` });
+    }
+
+    // Verify signature against public key
+    // We need the public key associated with the sender's current wallet
+    const senderWallet = await storage.getWalletAddressByAddress(sender.walletAddress!);
+    if (!senderWallet || !senderWallet.publicKey) {
+       return res.status(400).json({ message: "Sender public key not found on network." });
+    }
+
+    const message = JSON.stringify({ recipientAddress: recipientAddress.trim(), amount: amountNum.toString(), nonce });
+    const isValid = verifySignature(message, signature, senderWallet.publicKey);
+    
+    if (!isValid) {
+      console.error(`[SECURITY] Signature verification failed for User ${sender.username}`);
+      return res.status(400).json({ message: "Invalid transaction signature. Security rejection." });
+    }
+
     if (sender.walletAddress === recipientAddress.trim()) {
       return res.status(400).json({ message: "Cannot transfer to yourself" });
     }
@@ -709,8 +777,7 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Insufficient balance" });
     }
 
-    const senderWalletAddr = await storage.getWalletAddressByAddress(sender.walletAddress!);
-    const senderAddrId = senderWalletAddr ? senderWalletAddr.id : null;
+    const senderAddrId = senderWallet ? senderWallet.id : null;
 
     try {
       const tx = await storage.executeTransfer(
