@@ -896,32 +896,49 @@ export async function registerRoutes(
     return createHash("sha256").update(input).digest("hex");
   }
 
-  function calculatePendingRewards(userStaked: number, totalNetworkStaked: number, lastClaimTime: Date | null): number {
+  /**
+   * DIELBS (Digital Integrated Emission Ledger Browser System) 
+   * CORE CONSENSUS REWARD LOGIC - MAINNET STABILIZED V1.0
+   * 
+   * This function calculates participation rewards based on network weight.
+   * Logic: (User Staked / Total Network Staked) * Emission Rate per Slot
+   */
+  function calculateDIELBSParticipationRewards(
+    userStaked: number, 
+    totalNetworkStaked: number, 
+    lastClaimTime: Date | string | null
+  ): number {
     if (userStaked <= 0 || totalNetworkStaked <= 0) return 0;
-    const now = Date.now();
-    // Default to 'now' if no lastClaimTime to prevent initial massive reward on first stake
-    const lastClaim = lastClaimTime ? lastClaimTime.getTime() : now;
-    const elapsedSeconds = Math.max(0, (now - lastClaim) / 1000);
-
-    // 🛡️ LIVENESS CHECK: WebDollar 2 is a browser-native protocol. 
-    // To maintain network integrity and the "Social Contract" of mining, 
-    // rewards only accumulate while the routing node (browser) is active.
-    const LIVENESS_THRESHOLD_SECONDS = 30; // 30s grace period for network jitters
     
-    // If they've been away longer than the threshold, we only reward the most recent active block
-    // This stops "offline" passive earning, ensuring you only earn while the browser is 'Mining'.
-    const effectiveElapsed = elapsedSeconds > LIVENESS_THRESHOLD_SECONDS ? REWARD_INTERVAL_SECONDS : elapsedSeconds;
-
+    const now = Date.now();
+    const lastClaim = lastClaimTime ? new Date(lastClaimTime).getTime() : now;
+    const elapsedSeconds = Math.max(0, (now - lastClaim) / 1000);
+    
+    // Liveness Threshold: Rewards only accrue during active socket/tab presence (30s window)
+    const LIVENESS_THRESHOLD_SECONDS = 30;
+    const effectiveElapsed = Math.min(elapsedSeconds, LIVENESS_THRESHOLD_SECONDS);
+    
+    // Calculate slots participated (1 slot = 5 seconds)
     const rewardPeriods = effectiveElapsed / REWARD_INTERVAL_SECONDS;
+    
+    // Weighted share of the current STAKING_REWARD_RATE (1150 WEBD per full slot partition)
     const userShare = userStaked / totalNetworkStaked;
-    return userShare * STAKING_REWARD_RATE * rewardPeriods;
+    const cumulativeReward = userShare * STAKING_REWARD_RATE * rewardPeriods;
+    
+    // Return high-precision floor to prevent floating point drift
+    return Math.max(0, parseFloat(cumulativeReward.toFixed(8)));
   }
 
-  function calculateAPY(totalNetworkStaked: number): number {
-    if (totalNetworkStaked <= 0) return 0;
+  /**
+   * PROJECTION: Network Annual Percentage Yield
+   * Based on current DIELBS emission schedules
+   */
+  function calculateNetworkAPY(networkTotalWeight: number): number {
+    if (networkTotalWeight <= 0) return 0;
+    // (Annual Reward Pool / Total Network Stake) * 100
     const rewardsPerYear = STAKING_REWARD_RATE * (365 * 24 * 3600 / REWARD_INTERVAL_SECONDS);
-    const apy = (rewardsPerYear / totalNetworkStaked) * 100;
-    return Math.min(apy, 99999);
+    const apy = (rewardsPerYear / networkTotalWeight) * 100;
+    return Math.min(apy, 10000); // Cap UI at 10,000%
   }
 
   app.get(api.staking.info.path, async (req, res) => {
@@ -983,7 +1000,7 @@ export async function registerRoutes(
     // === Auto-Claim Rewards ===
     let pendingRewards = 0;
     if (userStaked > 0 && !isOnHold) {
-      pendingRewards = calculatePendingRewards(userStaked, totalStakedNum, user.lastStakeRewardClaim);
+      pendingRewards = calculateDIELBSParticipationRewards(userStaked, totalStakedNum, user.lastStakeRewardClaim);
 
       // Auto-claim if rewards exceed threshold
       if (pendingRewards > 0.0001) {
@@ -1019,7 +1036,7 @@ export async function registerRoutes(
       }
     }
 
-    const apy = calculateAPY(totalStakedNum);
+    const apy = calculateNetworkAPY(totalStakedNum);
     const latestBlock = await storage.getLatestBlock();
     const blocksList = await storage.getBlocks(1000);
     const totalMined = blocksList.reduce((sum: number, b: any) => sum + parseFloat(b.reward || "0"), 0);

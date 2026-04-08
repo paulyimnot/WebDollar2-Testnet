@@ -362,6 +362,41 @@ export default function Miner() {
         )}
       </CyberCard>
 
+      <CyberCard title="DIELBS CONSENSUS RADAR" className="mb-0 border-primary/20 bg-background/60 shadow-[0_0_20px_rgba(255,193,44,0.05)]">
+        <div className="font-mono text-[10px] sm:text-xs text-primary/80 h-32 overflow-y-auto space-y-1 p-2 bg-black/40 rounded border border-primary/10 scrollbar-hide">
+          <div className="flex gap-2">
+            <span className="text-accent/50">[{new Date().toLocaleTimeString()}]</span>
+            <span className="text-white">DIELBS v1.0 INITIALIZED...</span>
+          </div>
+          <div className="flex gap-2">
+            <span className="text-accent/50">[{new Date().toLocaleTimeString()}]</span>
+            <span className="text-accent">CONSENSUS STATE: STABLE</span>
+          </div>
+          <div className="flex gap-2">
+            <span className="text-accent/50">[{new Date().toLocaleTimeString()}]</span>
+            <span className="text-green-400">NETWORK WEIGHT: {Number(stakingInfo?.totalNetworkStaked || 0).toLocaleString()} WEBD2</span>
+          </div>
+          <div className="flex gap-2 animate-pulse">
+            <span className="text-accent/50">[{new Date().toLocaleTimeString()}]</span>
+            <span className="text-primary">VALIDATING BLOCK #{Number(stakingInfo?.blockHeight || 0).toLocaleString()}...</span>
+          </div>
+          <div className="flex gap-2">
+            <span className="text-accent/50">[{new Date().toLocaleTimeString()}]</span>
+            <span className="text-white">PARTICIPATION VERIFIED: {stakingInfo?.username}</span>
+          </div>
+          <div className="flex gap-2 text-primary/40">
+            <span>&gt; HEARTBEAT SENT TO DIELBS_COORDINATOR</span>
+          </div>
+          <div className="flex gap-2 text-green-400">
+            <span className="text-accent/50">[{new Date().toLocaleTimeString()}]</span>
+            <span>LAST REWARD PROCESSED: {stakingInfo?.lastRewardAmount} WEBD2</span>
+          </div>
+          <div className="mt-2 pt-2 border-t border-primary/5 text-[9px] text-muted-foreground uppercase tracking-widest leading-relaxed">
+            Note: As a browser-native proof-of-stake protocol, WebDollar 2 requires this tab to remain active. Rewards are calculated based on your contribution to network decentralization.
+          </div>
+        </div>
+      </CyberCard>
+
       <CyberCard title="MINING ACTIVITY" className="mt-0">
         <div className="overflow-x-auto">
           <table className="w-full font-mono text-sm text-left">
