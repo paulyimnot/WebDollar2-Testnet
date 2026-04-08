@@ -140,61 +140,70 @@ export default function Miner() {
 
       <CyberCard title="PoS MINING" className="flex flex-col">
         {/* === STATS ROW === */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-          <div className="bg-background p-3 border border-primary/10 rounded-md">
-            <div className="text-xs text-muted-foreground">MINING STAKE</div>
-            <div className="text-xl font-mono text-white flex items-center gap-2" data-testid="text-staked-balance">
-              {stakedNum > 0 ? stakedNum.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "0"}
+        {/* === STATS GRID === */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-background/40 p-4 border border-primary/20 rounded-lg backdrop-blur-sm">
+            <div className="text-[10px] tracking-widest text-primary/60 font-black uppercase mb-1">MINING STAKE</div>
+            <div className="flex items-center gap-2 overflow-hidden">
+              <div className="text-2xl font-mono text-white truncate" data-testid="text-staked-balance">
+                {stakedNum > 0 ? stakedNum.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "0"}
+              </div>
               {isMiningActive && (
-                <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded border border-green-500/30 font-mono uppercase animate-pulse">ACTIVE</span>
+                <span className="text-[9px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded border border-green-500/30 font-mono uppercase animate-pulse">ACTIVE</span>
               )}
               {isOnHold && (
-                <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded border border-red-500/30 font-mono uppercase">ON HOLD</span>
+                <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded border border-red-500/30 font-mono uppercase">ON HOLD</span>
               )}
             </div>
-            <div className="text-[10px] text-muted-foreground">WEBD2 mining</div>
+            <div className="text-[10px] text-muted-foreground mt-1">Staked WEBD2</div>
           </div>
-          <div className="bg-background p-3 border border-primary/10 rounded-md">
-            <div className="text-xs text-muted-foreground">TOTAL REWARDS EARNED</div>
-            <div className="text-xl font-mono text-accent" data-testid="text-total-rewards">
-              {totalRewardsEarned > 0 ? totalRewardsEarned.toLocaleString(undefined, { maximumFractionDigits: 4 }) : "0"}
+
+          <div className="bg-background/40 p-4 border border-primary/20 rounded-lg backdrop-blur-sm">
+            <div className="text-[10px] tracking-widest text-primary/60 font-black uppercase mb-1">TOTAL REWARDS</div>
+            <div className="text-2xl font-mono text-accent truncate" data-testid="text-total-rewards">
+              {totalRewardsEarned > 0 ? totalRewardsEarned.toLocaleString(undefined, { maximumFractionDigits: 4 }) : "0.0000"}
             </div>
-            <div className="text-[10px] text-muted-foreground">WEBD2 lifetime</div>
+            <div className="text-[10px] text-muted-foreground mt-1">Lifetime Earned</div>
           </div>
-          <div className="bg-background p-3 border border-primary/10 rounded-md">
-            <div className="text-xs text-muted-foreground">EST. APY</div>
-            <div className="text-xl font-mono text-green-400" data-testid="text-apy">
-              {apyNum > 0 ? `${apyNum.toLocaleString(undefined, { maximumFractionDigits: 1 })}%` : "--"}
-            </div>
-            <div className="text-[10px] text-muted-foreground">annual yield</div>
-          </div>
-          <div className="bg-background p-3 border border-primary/10 rounded-md">
-            <div className="text-xs text-muted-foreground">NETWORK MINING</div>
-            <div className="text-xl font-mono text-white" data-testid="text-network-staked">
-              {totalNetworkStakedNum > 0 ? totalNetworkStakedNum.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "0"}
-            </div>
-            <div className="text-[10px] text-muted-foreground">total WEBD2 staked</div>
-          </div>
-          <div className="bg-background p-3 border border-primary/10 rounded-md">
-            <div className="text-xs text-muted-foreground">REWARD MODE</div>
-            <div className="text-xl font-mono text-accent">
-              AUTO
-            </div>
-            <div className="text-[10px] text-muted-foreground">rewards → balance</div>
-          </div>
-          <div className="bg-background p-3 border border-primary/10 rounded-md">
-            <div className="text-xs text-muted-foreground">BLOCKS VALIDATED</div>
-            <div className="text-xl font-mono text-white">
+
+          <div className="bg-background/40 p-4 border border-primary/20 rounded-lg backdrop-blur-sm">
+            <div className="text-[10px] tracking-widest text-primary/60 font-black uppercase mb-1">BLOCKS VALIDATED</div>
+            <div className="text-2xl font-mono text-white truncate">
               {(stakingInfo as any)?.rewardsCount || 0}
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase">personal blocks</div>
+            <div className="text-[10px] text-muted-foreground mt-1">Personal Blocks</div>
           </div>
-          <div className="bg-background p-3 border border-accent/30 rounded-md shadow-[0_0_10px_rgba(255,193,44,0.1)]">
-            <div className="text-xs text-accent font-bold">LATEST REWARD</div>
-            <div className="text-xl font-mono text-white animate-pulse" data-testid="text-last-reward">
+
+          <div className="bg-accent/10 p-4 border border-accent/30 rounded-lg shadow-[0_0_15px_rgba(255,193,44,0.05)]">
+            <div className="text-[10px] tracking-widest text-accent font-black uppercase mb-1">LATEST REWARD</div>
+            <div className="text-2xl font-mono text-white animate-pulse truncate" data-testid="text-last-reward">
               +{parseFloat((stakingInfo as any)?.lastRewardAmount || "0").toLocaleString(undefined, { maximumFractionDigits: 4 })}
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase">last block added</div>
+            <div className="text-[10px] text-accent/60 mt-1 uppercase">Last Block Reward</div>
+          </div>
+        </div>
+
+        {/* === SECONDARY STATS === */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="bg-background/20 p-3 border border-primary/10 rounded-md">
+            <div className="text-[10px] text-muted-foreground uppercase">EST. APY</div>
+            <div className="text-lg font-mono text-green-400">
+              {apyNum > 0 ? `${apyNum.toLocaleString(undefined, { maximumFractionDigits: 1 })}%` : "--"}
+            </div>
+          </div>
+          <div className="bg-background/20 p-3 border border-primary/10 rounded-md">
+            <div className="text-[10px] text-muted-foreground uppercase">NETWORK STAKED</div>
+            <div className="text-lg font-mono text-white truncate">
+              {totalNetworkStakedNum > 0 ? totalNetworkStakedNum.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "0"}
+            </div>
+          </div>
+          <div className="bg-background/20 p-3 border border-primary/10 rounded-md">
+            <div className="text-[10px] text-muted-foreground uppercase">REWARD MODE</div>
+            <div className="text-lg font-mono text-accent">AUTO</div>
+          </div>
+          <div className="bg-background/20 p-3 border border-primary/10 rounded-md">
+            <div className="text-[10px] text-muted-foreground uppercase">NODE STATUS</div>
+            <div className="text-lg font-mono text-green-400">ONLINE</div>
           </div>
         </div>
 
