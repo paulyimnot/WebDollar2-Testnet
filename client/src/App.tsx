@@ -18,7 +18,6 @@ import Buy from "@/pages/Buy";
 import Admin from "@/pages/Admin";
 import Whitepaper from "@/pages/Whitepaper";
 import Blackpaper from "@/pages/Blackpaper";
-import Crash from "@/pages/Crash";
 import Faucet from "@/pages/Faucet";
 import NotFound from "@/pages/not-found";
 
@@ -26,11 +25,10 @@ function Router() {
   const [location] = useLocation();
 
   // Render standalone 'ecosystem' apps without the main WebDollar 2 navbar/footer
-  if (location === "/crash" || location === "/faucet") {
+  if (location === "/faucet") {
     return (
       <div className="min-h-screen bg-background text-foreground font-body">
         <Switch>
-          <Route path="/crash" component={Crash} />
           <Route path="/faucet" component={Faucet} />
         </Switch>
       </div>
