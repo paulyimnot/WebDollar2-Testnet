@@ -1043,6 +1043,8 @@ export async function registerRoutes(
       totalRewardsEarned: Number(totalRewardsEarned).toFixed(4),
       lastRewardAmount: Number(lastRewardAmount).toFixed(4),
       rewardsCount,
+      username: user.username,
+      walletAddress: user.walletAddress,
     });
   });
 

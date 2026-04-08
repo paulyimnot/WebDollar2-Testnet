@@ -124,10 +124,18 @@ export default function Miner() {
 
       <div className="border-b-2 border-primary/30 pb-8">
         <h1 className="text-4xl md:text-5xl font-heading text-white border-b border-accent/20 pb-2 w-fit mb-4" data-testid="text-miner-title">WD2 MINER</h1>
-        <p className="font-mono text-white/80 text-lg mt-2 leading-relaxed">
-          Stake your WEBD2 tokens to fuel the network and earn <strong className="text-accent underline decoration-accent/30 font-black">passive mining rewards</strong>.
-          Rewards are automatically added to your balance.
-        </p>
+        <div className="flex flex-wrap items-center gap-3 mt-2">
+          <p className="font-mono text-white/80 text-lg leading-relaxed">
+            Stake your WEBD2 tokens to fuel the network and earn <strong className="text-accent underline decoration-accent/30 font-black">passive mining rewards</strong>.
+            Rewards are automatically added to your balance.
+          </p>
+          <div className="bg-primary/10 border border-primary/20 rounded px-3 py-1 flex items-center gap-2">
+            <span className="text-[10px] font-black text-primary/60 uppercase tracking-tighter">OPERATOR:</span>
+            <span className="text-xs font-mono text-accent font-bold uppercase">{(stakingInfo as any)?.username || "GUEST"}</span>
+            <div className="w-[1px] h-3 bg-primary/20" />
+            <span className="text-[10px] font-mono text-primary/40">{(stakingInfo as any)?.walletAddress?.substring(0, 8)}...</span>
+          </div>
+        </div>
       </div>
 
       <CyberCard title="PoS MINING" className="flex flex-col">
