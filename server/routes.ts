@@ -11,7 +11,7 @@ import { createHash } from "crypto";
 import { checkConnection, getContractAddress, getOnChainBalance, getMaticBalance, getPolygonscanBaseUrl, getRecentBlocks, getRecentTransactionsFromBlock } from "./blockchain.js";
 import { db } from "./db.js";
 import { sql, eq } from "drizzle-orm";
-import { users } from "../shared/schema.js";
+import { users, transactions, walletAddresses } from "../shared/schema.js";
 import * as OTPAuth from "otpauth";
 import QRCode from "qrcode";
 import OpenAI from "openai";
@@ -64,9 +64,10 @@ export async function registerRoutes(
     name: 'wd2_session',
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days persistence
-      secure: process.env.NODE_ENV?.trim() === "production",
+      // 🛡️ SECURITY: sameSite 'none' with 'secure' is REQUIRED for cross-domain ecosystem (Casino -> Wallet)
+      secure: process.env.NODE_ENV === "production", 
       httpOnly: true,
-      sameSite: 'lax', // Lax is more compatible for cross-domain auth transitions
+      sameSite: 'none',
     },
     store: new SessionStore({ checkPeriod: 86400000 }),
   }));
@@ -997,41 +998,63 @@ export async function registerRoutes(
       }
     }
 
-    // === Auto-Claim Rewards ===
+    // === DIELBS CONSENSUS AUTO-CLAIM (Atomic Transaction Layer) ===
     let pendingRewards = 0;
     if (userStaked > 0 && !isOnHold) {
       pendingRewards = calculateDIELBSParticipationRewards(userStaked, totalStakedNum, user.lastStakeRewardClaim);
 
-      // Auto-claim if rewards exceed threshold
+      // Auto-claim threshold: 0.0001 WEBD2
       if (pendingRewards > 0.0001) {
-        // ALWAYS fetch the absolute latest user data before auto-claiming to avoid race conditions
-        const latestUser = await storage.getUser(user.id);
-        if (latestUser) {
-          const latestStaked = parseFloat(latestUser.stakedBalance || "0");
-          const availableBalance = parseFloat(latestUser.balance || "0");
-          const newBalance = (availableBalance + pendingRewards).toFixed(4);
-          
-          // Use latestStaked to ensure we don't overwrite a concurrent stake increase
-          await storage.updateUserStake(latestUser.id, latestStaked.toFixed(4), newBalance, new Date());
+        try {
+          await db.transaction(async (tx) => {
+            // Re-fetch user WITHIN transaction to lock the row
+            const [lockedUser] = await tx.select().from(users).where(eq(users.id, user.id)).for("update");
+            if (!lockedUser) return;
 
-          const minerWalletAddr = await storage.getWalletAddressByAddress(latestUser.walletAddress!);
-          if (minerWalletAddr) {
-            const addrBal = parseFloat(minerWalletAddr.balance || "0");
-            await storage.updateWalletAddressBalance(minerWalletAddr.id, (addrBal + pendingRewards).toFixed(4));
-          }
+            const latestStaked = parseFloat(lockedUser.stakedBalance || "0");
+            const availableBalance = parseFloat(lockedUser.balance || "0");
+            
+            // Re-calculate rewards using the locked record's timestamp (Security: Anti-Multi-Tab exploit)
+            const trueRewards = calculateDIELBSParticipationRewards(latestStaked, totalStakedNum, lockedUser.lastStakeRewardClaim);
+            if (trueRewards <= 0.0001) return; // Already claimed by another tab
 
-          await storage.createTransaction({
-            senderId: null,
-            receiverId: latestUser.id,
-            senderAddress: "SYSTEM_REWARD",
-            receiverAddress: latestUser.walletAddress,
-            amount: pendingRewards.toFixed(4),
-            type: "staking_reward",
-            blockId: null,
+            const newBalance = (availableBalance + trueRewards).toFixed(4);
+            
+            // Execute parallel updates across Ledger and Wallet tables
+            await tx.update(users)
+              .set({ 
+                balance: newBalance,
+                lastStakeRewardClaim: new Date()
+              })
+              .where(eq(users.id, lockedUser.id));
+
+            // Record the transaction in the consensus ledger
+            await tx.insert(transactions).values({
+              senderId: null,
+              receiverId: lockedUser.id,
+              senderAddress: "DIELBS_CONSENSUS",
+              receiverAddress: lockedUser.walletAddress,
+              amount: trueRewards.toFixed(4),
+              type: "staking_reward",
+              createdAt: new Date(),
+            } as any);
+
+            // Sync the primary wallet balance
+            const [minerWalletAddr] = await tx.select().from(walletAddresses).where(eq(walletAddresses.address, lockedUser.walletAddress!)).limit(1);
+            if (minerWalletAddr) {
+              const addrBal = parseFloat(minerWalletAddr.balance || "0");
+              await tx.update(walletAddresses)
+                .set({ balance: (addrBal + trueRewards).toFixed(4) })
+                .where(eq(walletAddresses.id, minerWalletAddr.id));
+            }
+
+            // Update local state for session response
+            userStaked = latestStaked;
+            pendingRewards = 0; // Successfully claimed
           });
-          
-          // Use the refreshed staked value for the response
-          userStaked = latestStaked;
+        } catch (claimErr) {
+          console.error("[CONSENSUS ADAPTOR] Atomic Claim Collision or Error:", claimErr);
+          // Non-blocking: We gracefully let the next poll attempt handle the claim
         }
       }
     }
