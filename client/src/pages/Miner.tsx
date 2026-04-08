@@ -10,6 +10,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function Miner() {
   const [_, setLocation] = useLocation();
@@ -22,11 +24,7 @@ export default function Miner() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [stakeAmount, setStakeAmount] = useState("");
-  const [changeAmount, setChangeAmount] = useState("");
-  const [showChangeAmount, setShowChangeAmount] = useState(false);
-  const [holdCountdown, setHoldCountdown] = useState("");
-
+  // Performance data for chart
   const { data: myTransactions } = useQuery({
     queryKey: [api.transactions.mine.path],
     queryFn: async () => {
@@ -36,6 +34,20 @@ export default function Miner() {
     },
     refetchInterval: 10000,
   });
+
+  const performanceData = (myTransactions || []).filter((tx: any) => tx.type === "staking_reward").slice(0, 7).reverse().map((tx: any, idx: number) => ({
+    name: `Slot ${idx + 1}`,
+    reward: parseFloat(tx.amount || "0"),
+  }));
+
+  if (performanceData.length === 0) {
+    performanceData.push({ name: 'IDLE', reward: 0 });
+  }
+
+  const [stakeAmount, setStakeAmount] = useState("");
+  const [changeAmount, setChangeAmount] = useState("");
+  const [showChangeAmount, setShowChangeAmount] = useState(false);
+  const [holdCountdown, setHoldCountdown] = useState("");
 
   useEffect(() => {
     if (!user) {
@@ -139,6 +151,29 @@ export default function Miner() {
       </div>
 
       <CyberCard title="PoS MINING" className="flex flex-col">
+        {/* === PERFORMANCE CHART === */}
+        <div className="h-48 w-full mb-8 bg-black/20 rounded-lg border border-primary/10 p-4">
+          <div className="text-[10px] tracking-widest text-primary/60 font-black uppercase mb-4 flex justify-between">
+            <span>CONSENSUS PARTICIPATION PERFORMANCE</span>
+            <span className="text-accent animate-pulse">LIVE FEED</span>
+          </div>
+          <ResponsiveContainer width="100%" height="80%">
+            <AreaChart data={performanceData}>
+              <defs>
+                <linearGradient id="colorReward" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#FFC107" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#FFC107" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,193,44,0.05)" vertical={false} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid #FFC107', borderRadius: '4px', fontSize: '10px' }}
+                itemStyle={{ color: '#FFC107' }}
+              />
+              <Area type="monotone" dataKey="reward" stroke="#FFC107" fillOpacity={1} fill="url(#colorReward)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
         {/* === STATS ROW === */}
         {/* === STATS GRID === */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
