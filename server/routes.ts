@@ -62,19 +62,35 @@ export async function registerRoutes(
 
   // 🛡️ WAVE 1: PERSISTENT POSTGRES SESSIONS
   // Ensure session table exists (Audit Point 4)
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS "session" (
-      "sid" varchar NOT NULL COLLATE "default",
-      "sess" json NOT NULL,
-      "expire" timestamp(6) NOT NULL
-    ) WITH (OIDS=FALSE);
-    DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey') THEN
-        ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
-      END IF;
-    END $$;
-    CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
-  `);
+  // Added retry logic to prevent 'EAI_AGAIN' DNS crashes on Render Free Tier cold-starts
+  let dbRetries = 10;
+  while (dbRetries > 0) {
+    try {
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "session" (
+          "sid" varchar NOT NULL COLLATE "default",
+          "sess" json NOT NULL,
+          "expire" timestamp(6) NOT NULL
+        ) WITH (OIDS=FALSE);
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey') THEN
+            ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+          END IF;
+        END $$;
+        CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+      `);
+      console.log("✅ Render Postgres Database session connection established.");
+      break;
+    } catch (err: any) {
+      console.error(`[DB STARTUP] Database connection failed (${err.code}). Retries left: ${dbRetries - 1}`);
+      dbRetries -= 1;
+      if (dbRetries === 0) {
+        console.error("❌ FATAL: Database failed to connect after multiple retries.");
+        throw err;
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
+    }
+  }
 
   app.use(session({
     secret: process.env.SESSION_SECRET!, 
