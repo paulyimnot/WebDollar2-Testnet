@@ -1358,8 +1358,13 @@ export async function registerRoutes(
         return balance;
       }
       return cachedBurnBalance.balance;
-    } catch (err) {
-      console.error("Failed to fetch burn address balance:", err);
+    } catch (err: any) {
+      if (err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT') {
+        // Quiet warning for legacy infrastructure downtime
+        console.warn(`[Network] Legacy explorer (webdollar.network) is currently unreachable. Using last known cached balance.`);
+      } else {
+        console.error("Failed to fetch burn address balance:", err);
+      }
       return cachedBurnBalance.balance;
     }
   }
