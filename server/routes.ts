@@ -1709,16 +1709,16 @@ export async function registerRoutes(
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
     // @ts-ignore
-    const admin = await storage.getUser(req.session.userId);
-    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+    const adminUser = await storage.getUser(req.session.userId);
+    if (!adminUser?.isDev) return res.status(403).json({ message: "Admin access required" });
 
-    const { query } = req.body;
-    if (!query || typeof query !== "string") return res.status(400).json({ message: "Search query required" });
+    const { query: userSearchQuery } = req.body;
+    if (!userSearchQuery || typeof userSearchQuery !== "string") return res.status(400).json({ message: "Search query required" });
 
     const results = await db.execute(sql`
       SELECT id, username, wallet_address as "walletAddress", is_dev as "isDev", is_foundation as "isFoundation", created_at as "createdAt"
       FROM users 
-      WHERE username ILIKE ${'%' + query + '%'} OR wallet_address ILIKE ${'%' + query + '%'}
+      WHERE username ILIKE ${'%' + userSearchQuery + '%'} OR wallet_address ILIKE ${'%' + userSearchQuery + '%'}
       LIMIT 10
     `);
 
@@ -1729,8 +1729,8 @@ export async function registerRoutes(
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
     // @ts-ignore
-    const admin = await storage.getUser(req.session.userId);
-    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+    const adminUser = await storage.getUser(req.session.userId);
+    if (!adminUser?.isDev) return res.status(403).json({ message: "Admin access required" });
 
     const targetUserId = parseInt(req.params.id);
     const { username, password, isDev, isFoundation } = req.body;
@@ -2348,7 +2348,7 @@ If you don't know something, say so honestly. Do not make up information. Keep a
     // @ts-ignore
     if (!req.session.userId) return res.status(401).send("Log in first, then visit this URL again.");
     // @ts-ignore
-    await storage.db.update(users).set({ isDev: true }).where(eq(users.id, req.session.userId));
+    await db.update(users).set({ isDev: true }).where(eq(users.id, req.session.userId));
     res.send("SUCCESS: You are now an Admin. Please restart your browser or log out and back in to see the Admin Panel.");
   });
 
