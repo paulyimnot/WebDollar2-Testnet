@@ -1315,7 +1315,7 @@ export async function registerRoutes(
       res.json({
         success: true,
         stakedBalance: newStakedBalance,
-        message: `Mining started with ${stakeAmount.toLocaleString()} WEBD. Total mining power: ${Number(newStakedBalance).toLocaleString()} WEBD.`,
+        message: `Mining started with ${Number(stakeAmount).toLocaleString(undefined, { minimumFractionDigits: 0 })} WEBD. Total mining power: ${Number(newStakedBalance).toLocaleString(undefined, { minimumFractionDigits: 0 })} WEBD.`,
       });
     } catch (err: any) {
       console.error("[STAKE] Error:", err);

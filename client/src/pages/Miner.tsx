@@ -181,7 +181,7 @@ export default function Miner() {
             <div className="text-[10px] tracking-widest text-primary/60 font-black uppercase mb-1">MINING STAKE</div>
             <div className="flex items-center gap-2 overflow-hidden">
               <div className="text-2xl font-mono text-white truncate" data-testid="text-staked-balance">
-                {stakedNum > 0 ? stakedNum.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "0"}
+                {stakedNum > 0 ? stakedNum.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 }) : "0"}
               </div>
               {isMiningActive && (
                 <span className="text-[9px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded border border-green-500/30 font-mono uppercase animate-pulse">ACTIVE</span>
@@ -323,7 +323,7 @@ export default function Miner() {
                 <div>
                   <label className="text-sm font-mono text-accent font-bold tracking-widest uppercase">CURRENTLY MINING</label>
                   <div className="text-3xl font-mono text-accent font-black mt-1">
-                    {stakedNum.toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-lg text-primary">WD2</span>
+                    {stakedNum.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 })} <span className="text-lg text-primary">WD2</span>
                   </div>
                 </div>
                 <Button
