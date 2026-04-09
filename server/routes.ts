@@ -77,6 +77,9 @@ export async function registerRoutes(
           END IF;
         END $$;
         CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+        
+        -- 🛡️ ENFORCE PRESENCE STAKING SCHEMA
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "last_active" timestamp DEFAULT now();
       `);
       console.log("✅ Render Postgres Database session connection established.");
       break;
