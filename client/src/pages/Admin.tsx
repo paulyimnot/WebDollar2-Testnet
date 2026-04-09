@@ -60,6 +60,11 @@ export default function Admin() {
 
   const { data: treasury, isLoading: treasuryLoading } = useQuery<any>({
     queryKey: ["/api/admin/treasury-info"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/treasury-info", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch treasury info");
+      return await res.json();
+    },
     enabled: !!user?.isDev,
   });
 
