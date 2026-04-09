@@ -176,7 +176,8 @@ app.use((req, res, next) => {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       
       // 🛡️ WAVE 1: REMOVE SENSITIVE LOGGING IN PRODUCTION
-      if (process.env.NODE_ENV !== "production" && capturedJsonResponse) {
+      const isProduction = process.env.NODE_ENV?.trim() === "production";
+      if (!isProduction && capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
