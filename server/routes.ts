@@ -375,7 +375,9 @@ export async function registerRoutes(
     });
 
     const expectedToken = totp.generate();
-    console.log(`[2FA Enable] User: ${user.username}, Code entered: ${code}, Expected: ${expectedToken}, Secret: ${user.totpSecret.substring(0, 4)}...`);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[2FA Enable Debug] User: ${user.username}, Code entered: ${code}, Expected: ${expectedToken}`);
+    }
 
     const delta = totp.validate({ token: code, window: 3 });
     if (delta === null) {
@@ -458,7 +460,9 @@ export async function registerRoutes(
     });
 
     const expectedToken = totp.generate();
-    console.log(`[2FA Verify Login] User: ${user.username}, Code entered: ${code}, Expected: ${expectedToken}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[2FA Verify Login Debug] User: ${user.username}, Code entered: ${code}, Expected: ${expectedToken}`);
+    }
 
     const delta = totp.validate({ token: code, window: 3 });
     if (delta === null) {
@@ -833,6 +837,25 @@ export async function registerRoutes(
     const isSenderBlocked = await storage.isWalletBlocked(sender.walletAddress!);
     if (isSenderBlocked) {
       return res.status(403).json({ message: "Your wallet is blacklisted from the network." });
+    }
+
+    // 🛡️ SIGNATURE VERIFICATION — Same requirement as public transfer
+    const { signature, nonce } = req.body;
+    if (!signature || nonce === undefined) {
+      return res.status(400).json({ message: "Transaction must be signed with a valid cryptographic signature." });
+    }
+    if (nonce !== sender.nonce) {
+      return res.status(400).json({ message: `Invalid network nonce. Expected ${sender.nonce}, got ${nonce}.` });
+    }
+    const senderWalletForSig = await storage.getWalletAddressByAddress(sender.walletAddress!);
+    if (!senderWalletForSig || !senderWalletForSig.publicKey) {
+      return res.status(400).json({ message: "Sender public key not found on network." });
+    }
+    const sigMessage = JSON.stringify({ recipientAddress: recipientAddress.trim(), amount: amountNum.toString(), nonce });
+    const isSigValid = verifySignature(sigMessage, signature, senderWalletForSig.publicKey);
+    if (!isSigValid) {
+      console.error(`[SECURITY] Private transfer signature verification failed for User ${sender.username}`);
+      return res.status(400).json({ message: "Invalid transaction signature. Security rejection." });
     }
 
     if (sender.walletAddress === recipientAddress.trim()) {
@@ -1748,7 +1771,7 @@ export async function registerRoutes(
     const existingMigration = await storage.getUserByUsername("migration_wallet");
     if (existingMigration) return res.status(400).json({ message: "Genesis wallets already generated." });
 
-    const MINT_PASSWORD = "AUTO_GENESIS_SECURE_PASSWORD"; // For system auto-creation
+    const MINT_PASSWORD = process.env.GENESIS_MINT_PASSWORD || "AUTO_GENESIS_SECURE_PASSWORD"; // Use env var in production
 
     const createGenesisUser = async (username: string, amount: string, isDevFlag: boolean, isFoundationFlag: boolean) => {
         const hashedPassword = await bcrypt.hash(MINT_PASSWORD, 12);

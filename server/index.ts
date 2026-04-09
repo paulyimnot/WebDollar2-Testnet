@@ -48,19 +48,19 @@ app.use(compression());
 // 🚫 SPAM PROTECTION (Global)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
-  max: 2000, // Stress Test: High limit for active testers
+  max: 300, // Public Testnet: 300 requests per 15 minutes per IP
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: "Stress Test: Too many requests. Relaxing in a few minutes..." }
+  message: { message: "Too many requests from this IP. Please slow down and try again in a few minutes." }
 });
 
 // Apply stricter limits to Auth/Faucet
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, 
-  max: 100, // Stress Test: Allow account switching and testing
+  max: 15, // Public Testnet: Max 15 auth attempts per hour per IP
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: "Stress Test: Authentication limit reached. Please wait a bit." }
+  message: { message: "Too many login/registration attempts. Please wait before trying again." }
 });
 
 const financialLimiter = rateLimit({
