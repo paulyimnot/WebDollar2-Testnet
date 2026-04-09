@@ -19,6 +19,8 @@ import Admin from "@/pages/Admin";
 import Whitepaper from "@/pages/Whitepaper";
 import Blackpaper from "@/pages/Blackpaper";
 import Faucet from "@/pages/Faucet";
+import HowItWorks from "@/pages/HowItWorks";
+import Security from "@/pages/Security";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -80,6 +82,8 @@ function Router() {
           <Route path="/admin" component={Admin} />
           <Route path="/whitepaper" component={Whitepaper} />
           <Route path="/blackpaper" component={Blackpaper} />
+          <Route path="/how-it-works" component={HowItWorks} />
+          <Route path="/security" component={Security} />
           <Route component={NotFound} />
         </Switch>
       </main>
@@ -120,7 +124,8 @@ function App() {
         <h1 className="text-4xl md:text-6xl font-black mb-6 tracking-widest font-heading drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]">⚠️ TAB LOCKED</h1>
         <p className="text-lg md:text-2xl text-white max-w-2xl font-bold">Only <strong className="text-accent underline text-3xl">ONE</strong> active WebDollar 2 Wallet is permitted per device!</p>
         <p className="text-sm md:text-base mt-6 text-red-400 bg-red-900/20 px-6 py-4 rounded-lg border border-red-500/30">
-          Strict Security Mode Enabled.<br/>Please persistently close this duplicate tab and universally return to your original active tab to continue sending, mining, or interacting!
+          Strict Security Mode: This restriction prevents race conditions in the browser-native DIELBS consensus engine and ensures your cryptographic keys are isolated to a single execution context.<br/>
+          <strong>Please close this tab and return to your original active session!</strong>
         </p>
       </div>
     );

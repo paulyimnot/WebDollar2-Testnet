@@ -49,3 +49,23 @@ export async function decryptPrivateKeyBrowser(encryptedKey: string, password: s
     throw new Error("Failed to decrypt private key. Incorrect password?");
   }
 }
+
+export async function calculatePoW(userId: number, challenge: string): Promise<string> {
+  let nonce = 0;
+  const prefix = "000";
+  
+  while (true) {
+    const data = String(userId) + challenge + String(nonce);
+    const msgBuffer = new TextEncoder().encode(data);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    if (hashHex.startsWith(prefix)) {
+      return String(nonce);
+    }
+    nonce++;
+    // Safety break
+    if (nonce > 100000) return String(nonce);
+  }
+}

@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import { PriceTicker, WEBD2toUSD, formatUSD } from "@/components/PriceTicker";
 import { TwoFactorSettings } from "@/components/TwoFactorSettings";
+import { calculatePoW } from "@/lib/crypto";
 
 export default function Wallet() {
   const [_, setLocation] = useLocation();
@@ -106,8 +107,22 @@ export default function Wallet() {
 
   const faucetMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/wallet/testnet-faucet", { method: "POST", credentials: "include" });
-      if (!res.ok) throw new Error("Faucet failed");
+      // 🛡️ SYBIL PROTECTION (Wave 3): Proof of Work Challenge
+      if (!user?.id) throw new Error("Authentication required.");
+      
+      const challenge = "faucet_" + Date.now();
+      const nonce = await calculatePoW(user.id, challenge);
+
+      const res = await fetch("/api/wallet/testnet-faucet", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challenge, nonce }),
+        credentials: "include" 
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Faucet claim failed");
+      }
       return res.json();
     },
     onSuccess: (data) => {
@@ -271,12 +286,12 @@ export default function Wallet() {
         <CyberCard title="TESTNET FAUCET" className="h-full border-accent/50 shadow-[0_0_20px_rgba(255,215,0,0.15)] bg-accent/5">
           <div className="flex flex-col h-full justify-between p-4">
             <div>
-              <h3 className="text-2xl font-heading text-accent mb-3 font-black tracking-wider">CLAIM FREE WD2</h3>
-              <p className="text-base font-mono text-white/90 leading-relaxed italic">Instantly receive <strong className="text-accent underline decoration-accent/30 font-black">10,000 WD2</strong> to your primary wallet to test the extreme speeds of the WD2 execution engine.</p>
+              <h3 className="text-2xl font-heading text-accent mb-3 font-black tracking-wider">CLAIM MINING REWARDS</h3>
+              <p className="text-base font-mono text-white/90 leading-relaxed italic">Solve a small <strong className="text-accent underline decoration-accent/30 font-black">CPU Mining Proof</strong> and instantly claim 10,000 WD2 to begin participation in the network.</p>
             </div>
             <div className="mt-8 space-y-4">
               <div className="text-[10px] font-mono text-red-500 font-black uppercase tracking-widest border border-red-500/30 bg-red-500/10 px-3 py-2 rounded flex items-center gap-2">
-                <span>⚠️</span> LIMIT: 1 CLAIM PER 24H
+                <span>⚠️</span> LIMIT: 1 CLAIM PER 24H (POW REQUIRED)
               </div>
               <Button 
                 className="btn-gold whitespace-nowrap px-10 py-8 text-xl font-black tracking-widest w-full shadow-lg shadow-accent/20"
@@ -284,8 +299,11 @@ export default function Wallet() {
                 disabled={faucetMutation.isPending}
                 data-testid="button-faucet-claim"
               >
-                {faucetMutation.isPending ? <Loader2 className="w-6 h-6 animate-spin mr-3"/> : <Zap className="w-6 h-6 mr-3" />}
-                CLAIM 10,000 WD2
+                {faucetMutation.isPending ? (
+                  <><Loader2 className="w-6 h-6 animate-spin mr-3"/> MINING PROOF...</>
+                ) : (
+                  <><Zap className="w-6 h-6 mr-3" /> SOLVE & CLAIM</>
+                )}
               </Button>
             </div>
           </div>

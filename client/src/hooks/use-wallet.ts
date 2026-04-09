@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "./use-toast";
-import { decryptPrivateKeyBrowser, signTransaction } from "@/lib/crypto";
+import { decryptPrivateKeyBrowser, signTransaction, calculatePoW } from "@/lib/crypto";
 
 export function useWallet() {
   const { toast } = useToast();
@@ -33,7 +33,7 @@ export function useWallet() {
       if (!encryptedPrivateKey) throw new Error("No primary wallet found for signing.");
 
       // 2. Decrypt key locally
-      const privateKey = await decryptPrivateKeyBrowser(encryptedPrivateKey, password);
+      let privateKey: string | null = await decryptPrivateKeyBrowser(encryptedPrivateKey, password);
 
       // 3. Create and sign message
       // Note: Must match the server's message format exactly
@@ -44,6 +44,9 @@ export function useWallet() {
       });
       
       const signature = await signTransaction(message, privateKey);
+      
+      // Cleanup sensitive data immediately
+      privateKey = null;
 
       // 4. Send signed transaction
       const res = await fetch(api.wallet.transfer.path, {

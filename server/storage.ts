@@ -248,17 +248,31 @@ export class DatabaseStorage implements IStorage {
       console.log(`[TRANSFER] Initiating: ${senderAddress} -> ${receiverAddress} (${amount} WEBD)`);
       await client.query('BEGIN');
 
-      // 1. Deduct from sender account
-      const senderResult = await client.query(
-        'UPDATE users SET balance = (balance::numeric - $1::numeric), nonce = nonce + 1 WHERE id = $2 AND balance::numeric >= $1::numeric RETURNING *',
-        [amount.toFixed(4), senderId]
+      // 0. LOCK SENDER ROW (Strict Serializability / Race Protection)
+      // This prevents any concurrent transaction from modifying this user's balance
+      // until this transaction commits or rolls back.
+      const lockResult = await client.query(
+        'SELECT id, balance::numeric, nonce FROM users WHERE id = $1 FOR UPDATE',
+        [senderId]
       );
 
-      if (senderResult.rowCount === 0) {
+      if (lockResult.rowCount === 0) {
         await client.query('ROLLBACK');
-        console.error(`[TRANSFER] FAILED: Insufficient balance for user ${senderId}`);
-        throw new Error('Insufficient balance');
+        throw new Error('Locking failed: User not found');
       }
+
+      const currentBalance = lockResult.rows[0].balance;
+      if (parseFloat(currentBalance) < amount) {
+        await client.query('ROLLBACK');
+        throw new Error('Insufficient balance (Race Protection Active)');
+      }
+
+      // 1. Deduct from sender account
+      // Note: We've already locked the row, so the deduction is now guaranteed to be safe
+      const senderResult = await client.query(
+        'UPDATE users SET balance = (balance::numeric - $1::numeric), nonce = nonce + 1 WHERE id = $2 RETURNING *',
+        [amount.toFixed(4), senderId]
+      );
 
       // 2. Add to receiver account
       await client.query(

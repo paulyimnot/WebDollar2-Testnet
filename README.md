@@ -21,7 +21,7 @@ Dive deeper into the technology behind WEBD2:
 - [Blackpaper](./BLACKPAPER.md) - Layman-friendly overview of the network vision and tokenomics.
 
 ## 🚀 How to join the Stress Test
-1. Visit the live dashboard: [LIVE_SITE_LINK_HERE]
+1. Visit the live dashboard: [https://webdollar2.com](https://webdollar2.com)
 2. Create or import your browser-native wallet.
 3. Start mining directly in your browser tab.
 4. Stress test the network by sending micro-transactions between wallets.

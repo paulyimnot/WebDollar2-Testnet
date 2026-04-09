@@ -18,8 +18,8 @@ const TOKENOMICS_DATA = [
 
 const FEATURES = [
   { icon: Globe, title: "Browser Native", desc: "No installs. Powered natively in your browser by WebAssembly & TypeScript." },
-  { icon: Zap, title: "Lightning Fast", desc: "Transactions confirmed in seconds via Proof-of-Stake." },
-  { icon: ShieldCheck, title: "Secure & Upgraded", desc: "Real cryptographic wallets with seed phrase backup." },
+  { icon: Zap, title: "Deterministic Speed", desc: "Transactions confirmed with 5-second finality via the DIELBS consensus layer." },
+  { icon: ShieldCheck, title: "Verified Security", desc: "Hardened secp256k1 signing with persistent database session persistence." },
   { icon: CreditCard, title: "Payment Card", desc: "Spend WEBD2 as fiat anywhere with the WebDollar 2 Card." },
 ];
 
@@ -70,7 +70,9 @@ export default function Home() {
             <p className="text-lg sm:text-xl md:text-2xl font-mono text-primary/90 mb-12 max-w-4xl mx-auto px-6 font-bold" data-testid="text-tagline">
               CURRENCY OF THE INTERNET <br/>
               <span className="text-base sm:text-lg md:text-lg text-muted-foreground block mt-8 leading-relaxed font-normal opacity-80">
-                First of its kind browser native blockchain with unsurpassed ed25519 crypto security, physics-defying speed thanks to the DIELBS engine infrastructure, with the ease of true mass adoption while remaining absolutely decentralized with ultra-low performance fees. Welcome to the future, ladies and gentlemen.
+                First-of-its-kind, browser-native blockchain utilizing the high-throughput DIELBS consensus engine. 
+                Secured by ed25519/secp256k1 signatures with 5-second deterministic finality and native WebAssembly validation. 
+                Mass adoption through absolute decentralization and zero-installation infrastructure.
               </span>
             </p>
 

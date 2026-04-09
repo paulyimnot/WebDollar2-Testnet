@@ -863,8 +863,21 @@ export async function registerRoutes(
   // Persistent 24h cooldown relocated to DB (faucet_claim_log)
    app.post("/api/wallet/testnet-faucet", async (req, res) => {
     // @ts-ignore
-    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });    try {
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    
+    try {
+      const { challenge, nonce } = req.body;
       const clientIp = req.ip || req.socket?.remoteAddress || "unknown_ip";
+
+      // 🛡️ SYBIL PROTECTION (Wave 3): Proof of Work
+      if (!challenge || !nonce) {
+        return res.status(400).json({ message: "Mining proof required. Please enable your browser miner to claim." });
+      }
+
+      const hash = createHash("sha256").update(String(req.session.userId) + challenge + nonce).digest("hex");
+      if (!hash.startsWith("000")) {
+        return res.status(400).json({ message: "Invalid mining proof. CPU effort verification failed." });
+      }
       
       // 0. GLOBAL IP BLACKLIST CHECK
       const isBanned = await db.execute(sql`SELECT id FROM banned_ips WHERE ip = ${clientIp}`);
