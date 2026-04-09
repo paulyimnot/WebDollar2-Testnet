@@ -11,7 +11,7 @@ import { createHash } from "crypto";
 import { checkConnection, getContractAddress, getOnChainBalance, getMaticBalance, getPolygonscanBaseUrl, getRecentBlocks, getRecentTransactionsFromBlock } from "./blockchain.js";
 import { db } from "./db.js";
 import { sql, eq } from "drizzle-orm";
-import { users, transactions, walletAddresses } from "../shared/schema.js";
+import { users, transactions, walletAddresses, blockedWallets, blocks } from "../shared/schema.js";
 import * as OTPAuth from "otpauth";
 import QRCode from "qrcode";
 import OpenAI from "openai";

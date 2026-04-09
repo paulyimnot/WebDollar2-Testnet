@@ -1,5 +1,5 @@
 import * as bip39 from "bip39";
-import { signSync, verify } from "@noble/secp256k1";
+import { sign, verify, getPublicKey } from "@noble/secp256k1";
 import { createHash, randomBytes, createCipheriv, createDecipheriv } from "crypto";
 import { ethers } from "ethers";
 
@@ -20,7 +20,7 @@ export function deriveKeyPair(mnemonic: string): { privateKey: string; publicKey
   const privateKeyHex = sha256Hex(seed.slice(0, 32));
 
   const privateKeyBytes = Buffer.from(privateKeyHex, "hex");
-  const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true);
+  const publicKeyBytes = getPublicKey(privateKeyBytes, true);
   const publicKeyHex = Buffer.from(publicKeyBytes).toString("hex");
 
   const addressHash = sha256Hex(Buffer.from(publicKeyHex, "hex"));
@@ -68,7 +68,7 @@ export function hashBlock(input: string, _timestamp?: number, _data?: string, _n
 export function signMessage(message: string, privateKeyHex: string): string {
   const msgHash = createHash("sha256").update(message).digest();
   const privateKeyBytes = Buffer.from(privateKeyHex, "hex");
-  const sig = signSync(msgHash, privateKeyBytes, { prehash: false });
+  const sig = sign(msgHash, privateKeyBytes, { prehash: false });
   return Buffer.from(sig).toString("hex");
 }
 
