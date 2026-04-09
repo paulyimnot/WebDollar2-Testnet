@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { CheckCircle2, XCircle, Clock, Shield, Loader2, ExternalLink, Eye, CreditCard, Mail, Users } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Shield, Loader2, ExternalLink, Eye, CreditCard, Mail, Users, Search, UserCog, ShieldAlert } from "lucide-react";
 
 export default function Admin() {
   const [_, setLocation] = useLocation();
@@ -18,6 +18,10 @@ export default function Admin() {
   const queryClient = useQueryClient();
    const [customAmounts, setCustomAmounts] = useState<Record<number, string>>({});
    const [announcement, setAnnouncement] = useState(() => localStorage.getItem("webd2_announcement") || "");
+   const [userSearch, setUserSearch] = useState("");
+   const [searchResults, setSearchResults] = useState<any[]>([]);
+   const [editingUser, setEditingUser] = useState<any>(null);
+   const [editForm, setEditForm] = useState({ username: "", password: "", isDev: false, isFoundation: false });
 
    const handleSaveAnnouncement = () => {
      localStorage.setItem("webd2_announcement", announcement);
@@ -46,6 +50,11 @@ export default function Admin() {
 
   const { data: waitlistEntries, isLoading: waitlistLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/card-waitlist"],
+    enabled: !!user?.isDev,
+  });
+
+  const { data: sweepstakes, isLoading: sweepsLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/casino-sweeps"],
     enabled: !!user?.isDev,
   });
 
@@ -103,6 +112,42 @@ export default function Admin() {
     onError: (error: Error) => {
       toast({ title: "ERROR", description: error.message, variant: "destructive" });
     },
+  });
+
+  const searchUsersMutation = useMutation({
+    mutationFn: async (query: string) => {
+      const res = await fetch("/api/admin/users/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Search failed");
+      return await res.json();
+    },
+    onSuccess: (data) => setSearchResults(data),
+  });
+
+  const updateUserInfoMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await fetch(`/api/admin/users/${id}/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Update failed");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "USER UPDATED", description: "Account overrides applied successfully." });
+      setEditingUser(null);
+      searchUsersMutation.mutate(userSearch);
+    },
+    onError: (err: any) => toast({ title: "UPDATE FAILED", description: err.message, variant: "destructive" }),
   });
 
   if (!user) {
@@ -278,7 +323,7 @@ export default function Admin() {
         {!waitlistLoading && waitlistEntries && waitlistEntries.length > 0 && (
           <>
             <div className="mb-4 p-3 bg-card border border-primary/10 rounded-md font-mono text-sm flex items-center gap-3">
-              <Mail className="w-5 h-5 text-accent" />
+              <Users className="w-5 h-5 text-accent" />
               <span className="text-muted-foreground">Total signups:</span>
               <span className="text-accent text-lg font-bold" data-testid="text-waitlist-total">{waitlistEntries.length}</span>
             </div>
@@ -310,6 +355,109 @@ export default function Admin() {
           </>
         )}
        </CyberCard>
+
+      <CyberCard title="SUPER-USER CONSOLE (ACCOUNT OVERRIDES)" className="mt-8 border-red-500/30">
+        <div className="space-y-6">
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search username or wallet address..."
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                className="pl-10 font-mono bg-background"
+              />
+            </div>
+            <Button onClick={() => searchUsersMutation.mutate(userSearch)} className="btn-gold">
+              {searchUsersMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "SEARCH"}
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {searchResults.map(u => (
+              <div key={u.id} className="p-4 border border-primary/20 bg-background/50 rounded-md flex items-center justify-between">
+                <div className="font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-bold">{u.username}</span>
+                    {u.isDev && <Badge className="bg-red-500/20 text-red-500 border-red-500/30 text-[10px]">ADMIN</Badge>}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{u.walletAddress}</div>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => {
+                    setEditingUser(u);
+                    setEditForm({ username: u.username, password: "", isDev: u.isDev, isFoundation: u.isFoundation });
+                  }}
+                  className="font-mono text-xs"
+                >
+                  <UserCog className="w-3 h-3 mr-1" /> EDIT
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {editingUser && (
+            <div className="mt-8 p-6 border-2 border-accent/30 bg-accent/5 rounded-lg space-y-4 animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-center gap-2 text-accent mb-4">
+                <ShieldAlert className="w-5 h-5" />
+                <h3 className="font-black tracking-widest uppercase">Overriding: {editingUser.username}</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono text-muted-foreground uppercase">Override Username</label>
+                  <Input 
+                    value={editForm.username}
+                    onChange={e => setEditForm(prev => ({ ...prev, username: e.target.value }))}
+                    className="bg-background font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono text-muted-foreground uppercase">Force New Password</label>
+                  <Input 
+                    type="password"
+                    placeholder="Leave blank to keep current"
+                    value={editForm.password}
+                    onChange={e => setEditForm(prev => ({ ...prev, password: e.target.value }))}
+                    className="bg-background font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6 py-2">
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    checked={editForm.isDev} 
+                    onChange={e => setEditForm(prev => ({ ...prev, isDev: e.target.checked }))}
+                    className="w-4 h-4 accent-red-500"
+                  />
+                  <label className="text-xs font-mono text-red-400 font-bold uppercase">Admin Privileges</label>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-accent/20">
+                <Button 
+                  onClick={() => updateUserInfoMutation.mutate({ id: editingUser.id, data: editForm })}
+                  disabled={updateUserInfoMutation.isPending}
+                  className="btn-gold flex-1"
+                >
+                  {updateUserInfoMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "APPLY OVERRIDES"}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setEditingUser(null)}
+                  className="font-mono text-xs"
+                >
+                  CANCEL
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </CyberCard>
 
       <CyberCard title="BROADCAST CENTER" className="mt-8 border-accent/30 shadow-[0_0_20px_rgba(255,193,44,0.05)]">
         <div className="space-y-4">

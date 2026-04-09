@@ -1214,10 +1214,9 @@ export async function registerRoutes(
       }
     }
 
-    const apy = calculateNetworkAPY(totalStakedNum, currentHeight);
-    const latestBlock = await storage.getLatestBlock();
-    const blocksList = await storage.getBlocks(1000);
-    const totalMined = blocksList.reduce((sum: number, b: any) => sum + parseFloat(b.reward || "0"), 0);
+    const infoApy = calculateNetworkAPY(totalStakedNum, currentHeight);
+    const infoBlocksList = await storage.getBlocks(1000);
+    const infoTotalMined = infoBlocksList.reduce((sum: number, b: any) => sum + parseFloat(b.reward || "0"), 0);
 
     // Calculate total rewards ever earned by this user using efficient aggregation
     const rewardStats = await storage.getUserRewardStats(user.id);
@@ -1228,10 +1227,10 @@ export async function registerRoutes(
     res.json({
       stakedBalance: userStaked.toFixed(4),
       pendingRewards: "0", // Always 0 since we auto-claim
-      apy: Math.round(apy * 100) / 100,
+      apy: Math.round(infoApy * 100) / 100,
       totalNetworkStaked: totalStakedNum.toFixed(4),
       blockHeight: latestBlock?.id || 0,
-      circulatingSupply: (totalMined + 6800000000 + 3400000000).toFixed(4),
+      circulatingSupply: (infoTotalMined + 6800000000 + 3400000000).toFixed(4),
       stakingStoppedAt: stakingStoppedAt ? new Date(stakingStoppedAt).toISOString() : null,
       holdRemainingMs,
       isOnHold,
@@ -1702,6 +1701,53 @@ export async function registerRoutes(
     }
 
     res.json(updated);
+  });
+
+  // === SUPER-USER MANAGEMENT ROUTES ===
+  app.post("/api/admin/users/search", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const suAdmin = await storage.getUser(req.session.userId);
+    if (!suAdmin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    const { query: suSearchQuery } = req.body;
+    if (!suSearchQuery || typeof suSearchQuery !== "string") return res.status(400).json({ message: "Search query required" });
+
+    const results = await db.execute(sql`
+      SELECT id, username, wallet_address as "walletAddress", is_dev as "isDev", is_foundation as "isFoundation", created_at as "createdAt"
+      FROM users 
+      WHERE username ILIKE ${'%' + suSearchQuery + '%'} OR wallet_address ILIKE ${'%' + suSearchQuery + '%'}
+      LIMIT 10
+    `);
+
+    res.json(results.rows);
+  });
+
+  app.post("/api/admin/users/:id/update", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const suAdmin = await storage.getUser(req.session.userId);
+    if (!suAdmin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    const targetUserId = parseInt(req.params.id);
+    const { username, password, isDev, isFoundation } = req.body;
+
+    const [targetUser] = await db.select().from(users).where(eq(users.id, targetUserId)).limit(1);
+    if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+    const updateData: any = {};
+    if (username) updateData.username = username;
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 12);
+    }
+    if (typeof isDev === 'boolean') updateData.isDev = isDev;
+    if (typeof isFoundation === 'boolean') updateData.isFoundation = isFoundation;
+
+    await db.update(users).set(updateData).where(eq(users.id, targetUserId));
+    
+    res.json({ success: true, message: `User ${targetUser.username} updated successfully.` });
   });
 
   app.post("/api/admin/conversions/:id/reject", async (req, res) => {
@@ -2296,6 +2342,15 @@ If you don't know something, say so honestly. Do not make up information. Keep a
     }
   });
 
+
+  // === EMERGENCY ADMIN PROMOTION (REMOVE AFTER USE) ===
+  app.get("/api/emergency-admin-promote", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).send("Log in first, then visit this URL again.");
+    // @ts-ignore
+    await db.update(users).set({ isDev: true }).where(eq(users.id, req.session.userId));
+    res.send("SUCCESS: You are now an Admin. Please restart your browser or log out and back in to see the Admin Panel.");
+  });
 
   // === Background Block Producer (DIELBS Engine) ===
   // Generates 1 native block every 5 seconds to match specification

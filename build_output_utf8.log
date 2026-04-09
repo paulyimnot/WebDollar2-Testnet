@@ -1,0 +1,139 @@
+﻿
+> rest-express@1.0.0 build
+> node --import tsx script/build.ts
+
+building client...
+[36mvite v5.4.10 [32mbuilding for production...[36m[39m
+transforming...
+npm.cmd : 
+At line:1 char:1
++ npm.cmd run build > build_output.log 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+/grid-pattern.svg referenced in /grid-pattern.svg didn't resolve at build time, it will remain unchanged to be 
+resolved at runtime
+[32mΓ£ô[39m 111 modules transformed.
+[31mx[39m Build failed in 5.92s
+[31m[commonjs--resolver] Missing "./sha256" specifier in "@noble/hashes" package[39m
+    at e (C:\Users\pauly\Desktop\WEBDOLLAR2\node_modules\vite\dist\node\chunks\dep-BWSbWtLw.js:46041:25)
+    at n (C:\Users\pauly\Desktop\WEBDOLLAR2\node_modules\vite\dist\node\chunks\dep-BWSbWtLw.js:46041:627)
+    at o (C:\Users\pauly\Desktop\WEBDOLLAR2\node_modules\vite\dist\node\chunks\dep-BWSbWtLw.js:46041:1297)
+    at resolveExportsOrImports 
+(C:\Users\pauly\Desktop\WEBDOLLAR2\node_modules\vite\dist\node\chunks\dep-BWSbWtLw.js:46662:18)
+    at resolveDeepImport 
+(C:\Users\pauly\Desktop\WEBDOLLAR2\node_modules\vite\dist\node\chunks\dep-BWSbWtLw.js:46685:25)
+    at tryNodeResolve (C:\Users\pauly\Desktop\WEBDOLLAR2\node_modules\vite\dist\node\chunks\dep-BWSbWtLw.js:46450:16)
+    at Object.resolveId (C:\Users\pauly\Desktop\WEBDOLLAR2\node_modules\vite\dist\node\chunks\dep-BWSbWtLw.js:46200:19)
+    at <anonymous> (C:\Users\pauly\Desktop\WEBDOLLAR2\node_modules\rollup\dist\es\shared\node-entry.js:22626:40)
+    at async PluginDriver.hookFirstAndGetPlugin 
+(C:\Users\pauly\Desktop\WEBDOLLAR2\node_modules\rollup\dist\es\shared\node-entry.js:22508:28)
+    at async resolveId (C:\Users\pauly\Desktop\WEBDOLLAR2\node_modules\rollup\dist\es\shared\node-entry.js:20959:26) {
+  code: 'PLUGIN_ERROR',
+  plugin: 'commonjs--resolver',
+  hook: 'resolveId',
+  watchFiles: [
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/index.html',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/main.tsx',
+    'C:\\Users\\pauly\\Desktop\\WEBDOLLAR2\\package.json',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/react/jsx-runtime.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/App.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/index.css',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/react-dom/client.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/index.html',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/hooks/use-addresses.ts',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/hooks/use-auth.ts',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/hooks/use-conversion.ts',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/hooks/use-explorer.ts',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/hooks/use-staking.ts',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/hooks/use-toast.ts',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/hooks/use-wallet.ts',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/lib/crypto.ts',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/lib/queryClient.ts',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/lib/utils.ts',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/CyberCard.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/Footer.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/HelpChat.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/Navbar.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/PriceTicker.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/TwoFactorSettings.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/hooks/use-mobile.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Addresses.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Admin.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Auth.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Benchmark.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Blackpaper.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Buy.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Card.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Chat.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Conversion.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Crash.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Explorer.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Faucet.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Home.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/HowItWorks.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Miner.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/not-found.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Security.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Wallet.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Wallet_original.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/pages/Whitepaper.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/badge.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/button.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/card.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/chart.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/input.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/scroll-area.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/separator.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/sheet.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/sidebar.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/skeleton.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/tabs.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/toast.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/toaster.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/client/src/components/ui/tooltip.tsx',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/tailwind.config.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/react/cjs/react-jsx-runtime.production.min.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/react-dom/index.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/wouter/src/index.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/index.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/react/index.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/react-dom/cjs/react-dom.production.min.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/wouter/src/use-browser-location.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/wouter/src/paths.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/wouter/src/react-deps.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/regexparam/dist/index.mjs',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/query-core/build/modern/index.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/types.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/useQueries.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/useQuery.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/useSuspenseQuery.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/useSuspenseInfiniteQuery.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/useSuspenseQueries.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/usePrefetchQuery.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/usePrefetchInfiniteQuery.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/queryOptions.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/infiniteQueryOptions.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/HydrationBoundary.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/QueryErrorResetBoundary.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/useIsFetching.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/useMutationState.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/useMutation.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/mutationOptions.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/useInfiniteQuery.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/react-query/build/modern/IsRestoringProvider.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/react/cjs/react.production.min.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/scheduler/index.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/wouter/src/use-sync-external-store.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/query-core/build/modern/focusManager.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/query-core/build/modern/environmentManager.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/query-core/build/modern/infiniteQueryObserver.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/query-core/build/modern/hydration.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/query-core/build/modern/mutationCache.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/query-core/build/modern/mutationObserver.js',
+    'C:/Users/pauly/Desktop/WEBDOLLAR2/node_modules/@tanstack/query-core/build/modern/onlineManager.js',
+    ... 22 more items
+  ]
+}
