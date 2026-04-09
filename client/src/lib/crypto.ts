@@ -1,5 +1,5 @@
 import * as secp256k1 from "@noble/secp256k1";
-import { sha256 } from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha2.js";
 
 // Helper to convert hex to bytes
 function hexToBytes(hex: string): Uint8Array {
