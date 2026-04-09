@@ -282,33 +282,33 @@ export default function Wallet() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <CyberCard title="TESTNET FAUCET" className="h-full border-accent/50 shadow-[0_0_20px_rgba(255,215,0,0.15)] bg-accent/5">
-          <div className="flex flex-col h-full justify-between p-4">
-            <div>
-              <h3 className="text-2xl font-heading text-accent mb-3 font-black tracking-wider">CLAIM MINING REWARDS</h3>
-              <p className="text-base font-mono text-white/90 leading-relaxed italic">Solve a small <strong className="text-accent underline decoration-accent/30 font-black">CPU Mining Proof</strong> and instantly claim 10,000 WD2 to begin participation in the network.</p>
-            </div>
-            <div className="mt-8 space-y-4">
-              <div className="text-[10px] font-mono text-red-500 font-black uppercase tracking-widest border border-red-500/30 bg-red-500/10 px-3 py-2 rounded flex items-center gap-2">
-                <span>⚠️</span> LIMIT: 1 CLAIM PER 24H (POW REQUIRED)
-              </div>
-              <Button 
-                className="btn-gold whitespace-nowrap px-10 py-8 text-xl font-black tracking-widest w-full shadow-lg shadow-accent/20"
-                onClick={() => faucetMutation.mutate()}
-                disabled={faucetMutation.isPending}
-                data-testid="button-faucet-claim"
-              >
-                {faucetMutation.isPending ? (
-                  <><Loader2 className="w-6 h-6 animate-spin mr-3"/> MINING PROOF...</>
-                ) : (
-                  <><Zap className="w-6 h-6 mr-3" /> SOLVE & CLAIM</>
-                )}
-              </Button>
-            </div>
+      <div className="bg-accent/5 border border-accent/20 rounded-lg p-3 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_0_15px_rgba(255,193,44,0.05)]">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-accent/10 rounded-full">
+            <Zap className="w-4 h-4 text-accent" />
           </div>
-        </CyberCard>
+          <div>
+            <div className="text-xs font-heading text-accent font-black tracking-wider uppercase">TESTNET FAUCET</div>
+            <div className="text-[10px] font-mono text-white/50 italic">Solve CPU Proof to claim 10,000 WD2 every 24 hours.</div>
+          </div>
+        </div>
+        <Button 
+          size="sm"
+          className="h-8 btn-gold px-4 text-[10px] font-black tracking-widest"
+          onClick={() => faucetMutation.mutate()}
+          disabled={faucetMutation.isPending}
+          data-testid="button-faucet-claim"
+        >
+          {faucetMutation.isPending ? (
+            <Loader2 className="w-3 h-3 animate-spin mr-2"/>
+          ) : (
+            <Zap className="w-3 h-3 mr-1.5" />
+          )}
+          {faucetMutation.isPending ? "MINING..." : "CLAIM 10k WD2"}
+        </Button>
+      </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <CyberCard title="WD2 ALIAS (IDENTITY)" className="h-full border-primary/30 bg-primary/5">
           <div className="flex flex-col h-full justify-between p-4">
             <div>
@@ -427,13 +427,13 @@ export default function Wallet() {
             </label>
             <Input 
               type="password" 
-              placeholder="Unlock wallet to sign" 
+              placeholder="Use your password to sign your transaction" 
               value={txPassword}
               onChange={(e) => setTxPassword(e.target.value)}
               className="bg-input border-primary/20 font-mono py-6"
             />
             <p className="text-[10px] text-muted-foreground font-mono italic">
-              * Required to mathematically sign this transaction using your private key.
+              * Use your password to sign your transaction.
             </p>
           </div>
           <Button

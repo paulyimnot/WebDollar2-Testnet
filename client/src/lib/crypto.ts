@@ -13,8 +13,9 @@ function bytesToHex(bytes: Uint8Array): string {
 
 export async function signTransaction(message: string, privateKeyHex: string): Promise<string> {
   const msgHash = sha256(message);
-  const sig = await secp256k1.sign(msgHash, privateKeyHex);
-  return bytesToHex(sig);
+  const privKeyBytes = hexToBytes(privateKeyHex);
+  const sigBytes = await secp256k1.sign(msgHash, privKeyBytes);
+  return bytesToHex(sigBytes);
 }
 
 // Decryption in browser using Web Crypto API or ethers
