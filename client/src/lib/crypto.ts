@@ -1,8 +1,12 @@
-import * as secp256k1 from "@noble/secp256k1";
+import { signAsync } from "@noble/secp256k1";
 
-// Helper to convert hex to bytes
+// Helper to convert hex to bytes safely
 function hexToBytes(hex: string): Uint8Array {
-  return new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+  const cleanHex = hex.startsWith("0x") ? hex.slice(2) : hex;
+  if (cleanHex.length % 2 !== 0) throw new Error("Invalid hex string length");
+  const pairs = cleanHex.match(/.{1,2}/g);
+  if (!pairs) return new Uint8Array(0);
+  return new Uint8Array(pairs.map(byte => parseInt(byte, 16)));
 }
 
 // Helper to convert bytes to hex
@@ -16,7 +20,7 @@ export async function signTransaction(message: string, privateKeyHex: string): P
   const msgHash = new Uint8Array(hashBuffer);
   
   const privKeyBytes = hexToBytes(privateKeyHex);
-  const sigBytes = await secp256k1.signAsync(msgHash, privKeyBytes, { prehash: false });
+  const sigBytes = await signAsync(msgHash, privKeyBytes, { prehash: false });
   return bytesToHex(sigBytes);
 }
 

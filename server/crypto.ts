@@ -1,5 +1,5 @@
 import * as bip39 from "bip39";
-import * as secp256k1 from "@noble/secp256k1";
+import { signSync, verify } from "@noble/secp256k1";
 import { createHash, randomBytes, createCipheriv, createDecipheriv } from "crypto";
 import { ethers } from "ethers";
 
@@ -68,7 +68,7 @@ export function hashBlock(input: string, _timestamp?: number, _data?: string, _n
 export function signMessage(message: string, privateKeyHex: string): string {
   const msgHash = createHash("sha256").update(message).digest();
   const privateKeyBytes = Buffer.from(privateKeyHex, "hex");
-  const sig = secp256k1.signSync(msgHash, privateKeyBytes);
+  const sig = signSync(msgHash, privateKeyBytes, { prehash: false });
   return Buffer.from(sig).toString("hex");
 }
 
@@ -77,7 +77,7 @@ export function verifySignature(message: string, signature: string, publicKey: s
     const msgHash = createHash("sha256").update(message).digest();
     const signatureBytes = Buffer.from(signature, "hex");
     const publicKeyBytes = Buffer.from(publicKey, "hex");
-    return secp256k1.verify(signatureBytes, msgHash, publicKeyBytes);
+    return verify(signatureBytes, msgHash, publicKeyBytes, { prehash: false });
   } catch (e) {
     console.error("Signature verification error:", e);
     return false;
