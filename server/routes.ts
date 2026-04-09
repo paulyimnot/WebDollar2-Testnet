@@ -62,7 +62,7 @@ export async function registerRoutes(
   // 🛡️ WAVE 1: PERSISTENT POSTGRES SESSIONS
   // Ensure session table exists (Audit Point 4)
   // Added retry logic to prevent 'EAI_AGAIN' DNS crashes on Render Free Tier cold-starts
-  let dbRetries = 10;
+  let dbRetries = 30;
   while (dbRetries > 0) {
     try {
       await db.execute(sql`
