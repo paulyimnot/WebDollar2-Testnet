@@ -58,6 +58,11 @@ export default function Admin() {
     enabled: !!user?.isDev,
   });
 
+  const { data: treasury, isLoading: treasuryLoading } = useQuery<any>({
+    queryKey: ["/api/admin/treasury-info"],
+    enabled: !!user?.isDev,
+  });
+
   const approveMutation = useMutation({
     mutationFn: async ({ id, amount }: { id: number; amount?: string }) => {
       const body: any = {};
@@ -183,21 +188,24 @@ export default function Admin() {
             <Rocket className="w-4 h-4" /> MIGRATION VAULT
           </div>
           <div className="text-xl text-white">43,200,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
-          <div className="text-[10px] text-muted-foreground mt-2 truncate">TARGET: EX-V1 COMMUNITY MIGRATION</div>
+          <div className="text-[9px] text-accent mt-2 break-all font-bold">ADDRESS: {treasury?.migration?.address || "FETCHING..."}</div>
+          <div className="text-[8px] text-muted-foreground mt-1 uppercase">Target: ex-v1 community</div>
         </div>
         <div className="p-4 bg-black border border-primary/30 rounded-lg font-mono">
           <div className="flex items-center gap-2 text-primary text-xs mb-2 uppercase">
             <ShieldAlert className="w-4 h-4" /> DEV TREASURY
           </div>
           <div className="text-xl text-white">6,800,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
-          <div className="text-[10px] text-muted-foreground mt-2 truncate">10% GENESIS ALLOCATION</div>
+          <div className="text-[9px] text-primary mt-2 break-all font-bold">ADDRESS: {treasury?.dev?.address || "FETCHING..."}</div>
+          <div className="text-[8px] text-muted-foreground mt-1 uppercase">10% Genesis Allocation</div>
         </div>
         <div className="p-4 bg-black border border-blue-500/30 rounded-lg font-mono">
           <div className="flex items-center gap-2 text-blue-400 text-xs mb-2 uppercase">
             <Users className="w-4 h-4" /> FOUNDATION RESERVE
           </div>
           <div className="text-xl text-white">3,400,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
-          <div className="text-[10px] text-muted-foreground mt-2 truncate">5% ECOSYSTEM GROWTH</div>
+          <div className="text-[9px] text-blue-400 mt-2 break-all font-bold">ADDRESS: {treasury?.foundation?.address || "FETCHING..."}</div>
+          <div className="text-[8px] text-muted-foreground mt-1 uppercase">5% Ecosystem Growth</div>
         </div>
       </div>
 

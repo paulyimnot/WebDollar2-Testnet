@@ -1921,6 +1921,25 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/treasury-info", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    const migration = await storage.getUserByUsername("migration_wallet");
+    const dev = await storage.getUserByUsername("dev_funds_wallet");
+    const foundation = await storage.getUserByUsername("foundation_wallet");
+
+    res.json({
+      migration: { address: migration?.walletAddress, balance: migration?.balance },
+      dev: { address: dev?.walletAddress, balance: dev?.balance },
+      foundation: { address: foundation?.walletAddress, balance: foundation?.balance }
+    });
+  });
+
+
   // === Blockchain / WebDollar 2 Routes ===
 
   app.get("/api/blockchain/status", async (_req, res) => {
