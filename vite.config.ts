@@ -30,7 +30,7 @@ export default defineConfig({
   },
   root: path.resolve(process.cwd(), "client"),
   optimizeDeps: {
-    include: ["date-fns", "qrcode.react", "@noble/secp256k1"],
+    include: ["date-fns", "qrcode.react", "@noble/secp256k1", "wouter"],
   },
   build: {
     target: "esnext",
