@@ -52,6 +52,14 @@ export function Navbar() {
               <span className="hidden md:inline font-mono text-xs text-muted-foreground">
                 {user.username}
               </span>
+              {user.isDev && (
+                <Link href="/admin">
+                  <Button variant="ghost" size="sm" className="text-accent hover:text-accent/80">
+                    <Shield className="w-4 h-4 mr-2" />
+                    ADMIN
+                  </Button>
+                </Link>
+              )}
               <Button
                 variant="outline"
                 size="sm"

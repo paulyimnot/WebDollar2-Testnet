@@ -65,12 +65,6 @@ function Router() {
         ⚠️ TESTNET NOTICE: Testnet coins have <strong>NO VALUE</strong>. The WebDollar Dev team reserves the right to stop, alter, reset, or change the Testnet at any time without notice. 
       </div>
 
-      {user && (
-        <div className="bg-blue-900 text-white p-1 text-[8px] font-mono text-center">
-          DEBUG: Logged in as {user.username} (ID: {user.id}) | Admin Status: {String(user.isDev)}
-        </div>
-      )}
-
       {announcement && (
         <div className="bg-accent text-black py-2 px-4 text-center font-mono text-sm font-black tracking-widest relative z-[60] shadow-[0_4px_20px_rgba(255,193,44,0.3)] animate-pulse">
           <span className="mr-2">📢</span> OPERATOR ANNOUNCEMENT: {announcement.toUpperCase()}

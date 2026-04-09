@@ -109,15 +109,6 @@ export async function registerRoutes(
     }),
   }));
 
-  // === EMERGENCY ADMIN PROMOTION (REMOVE AFTER USE) ===
-  app.get("/api/emergency-admin-promote", async (req, res) => {
-    // @ts-ignore
-    if (!req.session.userId) return res.status(401).send("Log in first, then visit this URL again.");
-    // @ts-ignore
-    await db.update(users).set({ isDev: true }).where(eq(users.id, req.session.userId));
-    res.send("SUCCESS: You are now an Admin. Please restart your browser or log out and back in to see the Admin Panel.");
-  });
-
   // === Auth Routes ===
   // Persistent anti-Sybil protection relocated to DB (registration_ip_log)
   
@@ -190,12 +181,6 @@ export async function registerRoutes(
       if (ip !== "unknown_ip") {
         await db.execute(sql`INSERT INTO registration_ip_log (ip) VALUES (${ip}) ON CONFLICT DO NOTHING`);
       }
-       // @ts-ignore
-      // 🛡️ EMERGENCY RECOVERY: Auto-promote owner to Admin
-      if (user.username === "paulyimnot") {
-        await db.update(users).set({ isDev: true }).where(eq(users.id, user.id));
-        user.isDev = true;
-      }
       req.session.userId = user.id;
       const { password: _, ...safeUser } = user;
       res.status(201).json(safeUser);
@@ -250,12 +235,6 @@ export async function registerRoutes(
       }
 
       console.log(`[LOGIN] Password valid for "${rawTrimmed}", 2FA enabled: ${user.is2faEnabled}, has TOTP: ${!!user.totpSecret}`);
-
-      // 🛡️ EMERGENCY RECOVERY: Auto-promote owner to Admin
-      if (user.username.toLowerCase() === "paulyimnot") {
-        await db.update(users).set({ isDev: true }).where(eq(users.id, user.id));
-        user.isDev = true;
-      }
 
       if (user.is2faEnabled && user.totpSecret) {
         console.log(`[LOGIN] Requiring 2FA for "${rawTrimmed}"`);
