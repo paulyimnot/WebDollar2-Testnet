@@ -97,8 +97,7 @@ export async function registerRoutes(
     saveUninitialized: false,
     name: 'wd2_session',
     cookie: {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days persistence
-      // 🛡️ SECURITY: sameSite 'none' with 'secure' is REQUIRED for cross-domain ecosystem (Casino -> Wallet)
+      // 🛡️ SECURITY FIX: Removed 30-day maxAge. Now a strict "Session" cookie that deletes when the browser closes.
       secure: process.env.NODE_ENV === "production", 
       httpOnly: true,
       sameSite: 'none',
