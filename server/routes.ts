@@ -723,6 +723,23 @@ export async function registerRoutes(
     res.json(safeUser);
   });
 
+  app.post("/api/staking/stop", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    await storage.updateUser(req.session.userId, { stakingStoppedAt: new Date() });
+    res.json({ success: true, message: "Staking stopped. Tokens will be released in 7 days." });
+  });
+
+  // === PROOF OF PRESENCE HEARTBEAT ===
+  app.post("/api/staking/heartbeat", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    await db.update(users).set({ lastActive: new Date() }).where(eq(users.id, req.session.userId));
+    res.json({ success: true, timestamp: new Date().toISOString() });
+  });
+
   // 🛡️ WAVE 1: SECURE SIGNING PREFLIGHT
   app.get("/api/wallet/sign-preflight", async (req, res) => {
     // @ts-ignore
@@ -2381,6 +2398,44 @@ If you don't know something, say so honestly. Do not make up information. Keep a
       if (nextId % 100 === 0) {
         console.log(`[DIELBS] Produced Block #${nextId} | Rewards Pool: ${rewardAmount.toFixed(2)} WEBD2`);
       }
+
+      // === STAKING REWARD DISTRIBUTION (PROOF OF PRESENCE) ===
+      try {
+        const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+        // Find users who have > 1000 staked AND have sent a heartbeat in the last minute
+        const activeStakers = await db.select().from(users).where(
+          and(
+            gt(users.stakedBalance, "1000"),
+            gt(users.lastActive, oneMinuteAgo)
+          )
+        );
+
+        if (activeStakers.length > 0) {
+          const totalNetworkStaked = activeStakers.reduce((sum, u) => sum + parseFloat(u.stakedBalance || "0"), 0);
+          
+          for (const user of activeStakers) {
+            const userStake = parseFloat(user.stakedBalance || "0");
+            const userShare = userStake / totalNetworkStaked;
+            const userReward = rewardAmount * userShare;
+
+            if (userReward > 0.0001) {
+              const newBalance = (parseFloat(user.balance || "0") + userReward).toFixed(4);
+              await storage.updateUser(user.id, { balance: newBalance });
+              
+              // Log the reward transaction
+              await db.insert(transactions).values({
+                receiverId: user.id,
+                amount: userReward.toFixed(4),
+                type: "staking_reward",
+                timestamp: new Date()
+              });
+            }
+          }
+        }
+      } catch (stakingErr) {
+        console.error("[DIELBS] Staking distribution error:", stakingErr);
+      }
+
     } catch (err) {
       console.error("[DIELBS] Block production error:", err);
     }

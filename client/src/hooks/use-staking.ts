@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { useToast } from "./use-toast";
@@ -5,6 +6,19 @@ import { useToast } from "./use-toast";
 export function useStaking() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const sendHeartbeat = async () => {
+      try {
+        await fetch("/api/staking/heartbeat", { method: "POST", credentials: "include" });
+      } catch (e) {
+        console.warn("Heartbeat failed", e);
+      }
+    };
+    const interval = setInterval(sendHeartbeat, 30000);
+    sendHeartbeat(); // Send immediate pulse on load
+    return () => clearInterval(interval);
+  }, []);
 
   const { data: stakingInfo, isLoading: isLoadingInfo } = useQuery({
     queryKey: [api.staking.info.path],
