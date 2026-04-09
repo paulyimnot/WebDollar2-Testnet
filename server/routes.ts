@@ -100,7 +100,7 @@ export async function registerRoutes(
       // 🛡️ SECURITY FIX: Removed 30-day maxAge. Now a strict "Session" cookie that deletes when the browser closes.
       secure: process.env.NODE_ENV === "production", 
       httpOnly: true,
-      sameSite: 'none',
+      sameSite: 'lax',
     },
     store: new PostgresStore({
       pool: pool,
@@ -108,6 +108,15 @@ export async function registerRoutes(
       createTableIfMissing: false // We handled it manually for precision
     }),
   }));
+
+  // === EMERGENCY ADMIN PROMOTION (REMOVE AFTER USE) ===
+  app.get("/api/emergency-admin-promote", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).send("Log in first, then visit this URL again.");
+    // @ts-ignore
+    await db.update(users).set({ isDev: true }).where(eq(users.id, req.session.userId));
+    res.send("SUCCESS: You are now an Admin. Please restart your browser or log out and back in to see the Admin Panel.");
+  });
 
   // === Auth Routes ===
   // Persistent anti-Sybil protection relocated to DB (registration_ip_log)
@@ -2340,16 +2349,6 @@ If you don't know something, say so honestly. Do not make up information. Keep a
         res.status(500).json({ error: "Failed to get response" });
       }
     }
-  });
-
-
-  // === EMERGENCY ADMIN PROMOTION (REMOVE AFTER USE) ===
-  app.get("/api/emergency-admin-promote", async (req, res) => {
-    // @ts-ignore
-    if (!req.session.userId) return res.status(401).send("Log in first, then visit this URL again.");
-    // @ts-ignore
-    await db.update(users).set({ isDev: true }).where(eq(users.id, req.session.userId));
-    res.send("SUCCESS: You are now an Admin. Please restart your browser or log out and back in to see the Admin Panel.");
   });
 
   // === Background Block Producer (DIELBS Engine) ===
