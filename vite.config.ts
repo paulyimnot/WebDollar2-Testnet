@@ -29,19 +29,17 @@ export default defineConfig({
     },
   },
   root: path.resolve(process.cwd(), "client"),
+  optimizeDeps: {
+    include: ["date-fns", "qrcode.react", "@noble/secp256k1"],
+  },
   build: {
     target: "esnext",
     minify: false,
     outDir: path.resolve(process.cwd(), "dist", "public"),
     emptyOutDir: true,
-  },
-  server: {
-    fs: {
-      strict: true,
-      deny: ["**/.*"],
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
     },
-  },
-  optimizeDeps: {
-    include: ["date-fns"],
   },
 });
