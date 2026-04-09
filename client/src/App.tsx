@@ -45,6 +45,10 @@ function Router() {
   if (location === "/faucet") {
     return (
       <div className="min-h-screen bg-background text-foreground font-body">
+        {/* GLOBAL TESTNET DISCLAIMER BANNER */}
+        <div className="bg-red-900/90 text-white py-1.5 px-4 text-center font-mono text-[10px] sm:text-xs font-bold tracking-wide border-b border-red-500/50 sticky top-0 z-[100] shadow-[0_4px_20px_rgba(220,38,38,0.3)]">
+          ⚠️ TESTNET NOTICE: Testnet coins have <strong>NO VALUE</strong>. The WebDollar Dev team reserves the right to stop, alter, reset, or change the Testnet at any time without notice. 
+        </div>
         <Switch>
           <Route path="/faucet" component={Faucet} />
         </Switch>
@@ -54,6 +58,11 @@ function Router() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
+      {/* GLOBAL TESTNET DISCLAIMER BANNER */}
+      <div className="bg-red-900/90 text-white py-1.5 px-4 text-center font-mono text-[10px] sm:text-xs font-bold tracking-wide border-b border-red-500/50 sticky top-0 z-[100] shadow-[0_4px_20px_rgba(220,38,38,0.3)]">
+        ⚠️ TESTNET NOTICE: Testnet coins have <strong>NO VALUE</strong>. The WebDollar Dev team reserves the right to stop, alter, reset, or change the Testnet at any time without notice. 
+      </div>
+
       {announcement && (
         <div className="bg-accent text-black py-2 px-4 text-center font-mono text-sm font-black tracking-widest relative z-[60] shadow-[0_4px_20px_rgba(255,193,44,0.3)] animate-pulse">
           <span className="mr-2">📢</span> OPERATOR ANNOUNCEMENT: {announcement.toUpperCase()}
