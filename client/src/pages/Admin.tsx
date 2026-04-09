@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { CheckCircle2, XCircle, Clock, Shield, Loader2, ExternalLink, Eye, CreditCard, Mail, Users, Search, UserCog, ShieldAlert } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Shield, Loader2, ExternalLink, Eye, CreditCard, Mail, Users, Search, UserCog, ShieldAlert, Rocket } from "lucide-react";
 
 export default function Admin() {
   const [_, setLocation] = useLocation();
