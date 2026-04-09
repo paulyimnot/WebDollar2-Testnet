@@ -197,9 +197,9 @@ export async function registerRoutes(
   app.post(api.auth.login.path, async (req, res, next) => {
     try {
       const ip = req.ip || "unknown";
-      // 🛡️ REQ ID 10: Limit login to 3 attempts, 5 minute cooldown
-      if (rateLimit(`login:${ip}`, 3, 300000)) {
-        return res.status(429).json({ message: "Security Warning: Too many attempts. Access blocked for 5 minutes." });
+      // 🛡️ REQ ID 10: Relaxed for Troubleshooting (10 attempts, 2 minute cooldown)
+      if (rateLimit(`login:${ip}`, 10, 120000)) {
+        return res.status(429).json({ message: "Security Warning: Too many attempts. Access blocked for 2 minutes." });
       }
 
       const { username: rawUsername, password } = req.body;
@@ -2294,6 +2294,15 @@ If you don't know something, say so honestly. Do not make up information. Keep a
         res.status(500).json({ error: "Failed to get response" });
       }
     }
+  });
+
+  // === EMERGENCY ADMIN PROMOTION (REMOVE AFTER USE) ===
+  app.get("/api/emergency-admin-promote", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).send("Log in first, then visit this URL again.");
+    // @ts-ignore
+    await storage.db.update(users).set({ isDev: true }).where(eq(users.id, req.session.userId));
+    res.send("SUCCESS: You are now an Admin. Please restart your browser or log out and back in to see the Admin Panel.");
   });
 
   // === Background Block Producer (DIELBS Engine) ===
