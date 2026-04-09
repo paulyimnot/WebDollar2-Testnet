@@ -1034,10 +1034,18 @@ export async function registerRoutes(
 
   // === Proof-of-Stake Staking Routes ===
 
-  const STAKING_REWARD_RATE = 1150; // 1,150 WEBD distributed every 5 seconds among all stakers (Matches Home/Chat spec)
+  // === Proof-of-Stake Staking Routes (100-Year Halving Model) ===
+  const TOTAL_MINING_SUPPLY = 57800000000; // 85% of 68B
+  const BLOCKS_PER_ERA = 18934560; // Exactly 3 years at 5s blocks
+  const INITIAL_ERA_REWARD = 1526.32; // Starting reward to reach 57.8B through halvings
   const REWARD_INTERVAL_SECONDS = 5;
   const MIN_STAKE_AMOUNT = 1000;
-  const MIN_CLAIM_INTERVAL_MS = 30000; // 30 seconds minimum between claims
+
+  function getCurrentBlockReward(height: number): number {
+    const era = Math.floor(height / BLOCKS_PER_ERA);
+    if (era >= 32) return 0; // Supply cap reached
+    return INITIAL_ERA_REWARD / Math.pow(2, era);
+  }
 
   function sha256Hex(input: string): string {
     return createHash("sha256").update(input).digest("hex");
@@ -1053,7 +1061,8 @@ export async function registerRoutes(
   function calculateDIELBSParticipationRewards(
     userStaked: number, 
     totalNetworkStaked: number, 
-    lastClaimTime: Date | string | null
+    lastClaimTime: Date | string | null,
+    currentHeight: number
   ): number {
     if (userStaked <= 0 || totalNetworkStaked <= 0) return 0;
     
@@ -1068,22 +1077,19 @@ export async function registerRoutes(
     // Calculate slots participated (1 slot = 5 seconds)
     const rewardPeriods = effectiveElapsed / REWARD_INTERVAL_SECONDS;
     
-    // Weighted share of the current STAKING_REWARD_RATE (1150 WEBD per full slot partition)
+    // Weighted share of the current reward rate based on halving era
+    const currentRate = getCurrentBlockReward(currentHeight);
     const userShare = userStaked / totalNetworkStaked;
-    const cumulativeReward = userShare * STAKING_REWARD_RATE * rewardPeriods;
+    const cumulativeReward = userShare * currentRate * rewardPeriods;
     
     // Return high-precision floor to prevent floating point drift
     return Math.max(0, parseFloat(cumulativeReward.toFixed(8)));
   }
 
-  /**
-   * PROJECTION: Network Annual Percentage Yield
-   * Based on current DIELBS emission schedules
-   */
-  function calculateNetworkAPY(networkTotalWeight: number): number {
+  function calculateNetworkAPY(networkTotalWeight: number, currentHeight: number): number {
     if (networkTotalWeight <= 0) return 0;
-    // (Annual Reward Pool / Total Network Stake) * 100
-    const rewardsPerYear = STAKING_REWARD_RATE * (365 * 24 * 3600 / REWARD_INTERVAL_SECONDS);
+    const currentRate = getCurrentBlockReward(currentHeight);
+    const rewardsPerYear = currentRate * (365 * 24 * 3600 / REWARD_INTERVAL_SECONDS);
     const apy = (rewardsPerYear / networkTotalWeight) * 100;
     return Math.min(apy, 10000); // Cap UI at 10,000%
   }
@@ -1144,10 +1150,13 @@ export async function registerRoutes(
       }
     }
 
-    // === DIELBS CONSENSUS AUTO-CLAIM (Atomic Transaction Layer) ===
+    // === DIELBS CONSENSUS AUTO-CLAIM ===
+    const latestBlock = await storage.getLatestBlock();
+    const currentHeight = latestBlock?.id || 0;
+    
     let pendingRewards = 0;
     if (userStaked > 0 && !isOnHold) {
-      pendingRewards = calculateDIELBSParticipationRewards(userStaked, totalStakedNum, user.lastStakeRewardClaim);
+      pendingRewards = calculateDIELBSParticipationRewards(userStaked, totalStakedNum, user.lastStakeRewardClaim, currentHeight);
 
       // Auto-claim threshold: 0.0001 WEBD2
       if (pendingRewards > 0.0001) {
@@ -1205,7 +1214,7 @@ export async function registerRoutes(
       }
     }
 
-    const apy = calculateNetworkAPY(totalStakedNum);
+    const apy = calculateNetworkAPY(totalStakedNum, currentHeight);
     const latestBlock = await storage.getLatestBlock();
     const blocksList = await storage.getBlocks(1000);
     const totalMined = blocksList.reduce((sum: number, b: any) => sum + parseFloat(b.reward || "0"), 0);
@@ -1238,12 +1247,13 @@ export async function registerRoutes(
     const totalStaked = await storage.getTotalNetworkStaked();
     const totalStakers = await storage.getTotalStakers();
     const latestBlock = await storage.getLatestBlock();
+    const currentHeight = latestBlock?.id || 0;
 
     res.json({
       totalStaked,
       totalStakers,
-      blockHeight: latestBlock?.id || 0,
-      rewardRate: `${STAKING_REWARD_RATE} WEBD / ${REWARD_INTERVAL_SECONDS}s`,
+      blockHeight: currentHeight,
+      rewardRate: `${getCurrentBlockReward(currentHeight).toFixed(2)} WEBD / 5s`,
     });
   });
 
@@ -2208,10 +2218,10 @@ export async function registerRoutes(
   const WEBDOLLAR_SYSTEM_PROMPT = `You are the WebDollar 2 Help Assistant. You answer questions about WDollar 2 (WEBD), a cryptocurrency platform. Be concise, friendly, and helpful. Always refer to the project as "WebDollar 2" or "WDollar 2" — never "2.0".
 
 Key facts you know:
-- WebDollar 2 is a cryptocurrency with the ticker WEBD. Price is approximately $0.00099900 per WEBD.
+- WebDollar 2 is a cryptocurrency with the ticker WEBD. Price is approximately $0.00096300 per WEBD.
 - Total supply: 68 billion WEBD tokens. Distribution: 85% public mining (57.8B), 10% dev allocation (6.8B), 5% foundation (3.4B).
-- Mining uses Proof-of-Stake (PoS). Users stake WEBD tokens and earn passive rewards. Base rate: 550 WEBD distributed every 30 seconds among all stakers, designed for a 100-year supply duration.
-- Minimum stake: 5,000 WEBD. There is a 30-second cooldown between claiming rewards. APY varies based on total network stake.
+- Mining uses Proof-of-Stake (PoS). Users stake WEBD tokens and earn passive rewards. Base rate: 1,526.32 WEBD distributed every 5 seconds (halving every 3 years), designed for a 100-year supply duration.
+- Minimum stake: 1,000 WEBD. Rewards are auto-deposited every 5 seconds. APY varies based on total network stake.
 - Each wallet generates a 12-word BIP39 seed phrase, a WEBD$ address, and a Polygon-compatible 0x address from the same private key using secp256k1 cryptography.
 - Users can create multiple addresses under one account from the Addresses page. Each address has its own balance and can be locked for security.
 - The platform is connected to the Polygon (Amoy testnet) blockchain via Alchemy RPC. Users can view their MATIC balance and Polygonscan links.
@@ -2297,17 +2307,19 @@ If you don't know something, say so honestly. Do not make up information. Keep a
       // Seed a semi-random hash for the new block
       const newHash = createHash("sha256").update(prevHash + Date.now() + nextId).digest("hex");
       
+      const rewardAmount = getCurrentBlockReward(nextId);
+      
       await storage.createBlock({
         hash: newHash,
         previousHash: prevHash,
         minerId: null, // System generated block for Testnet stability
-        reward: STAKING_REWARD_RATE.toFixed(4),
+        reward: rewardAmount.toFixed(4),
         difficulty: 1,
         nonce: Math.floor(Math.random() * 1000000)
       });
       
       if (nextId % 100 === 0) {
-        console.log(`[DIELBS] Produced Block #${nextId} | Rewards Pool: ${STAKING_REWARD_RATE} WEBD2`);
+        console.log(`[DIELBS] Produced Block #${nextId} | Rewards Pool: ${rewardAmount.toFixed(2)} WEBD2`);
       }
     } catch (err) {
       console.error("[DIELBS] Block production error:", err);
