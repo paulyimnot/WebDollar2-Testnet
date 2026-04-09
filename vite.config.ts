@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
+const __dirname = path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Z]:)/, '$1');
+
 export default defineConfig({
   plugins: [
     react(),
@@ -23,19 +25,19 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(process.cwd(), "client", "src"),
-      "@shared": path.resolve(process.cwd(), "shared"),
-      "@assets": path.resolve(process.cwd(), "attached_assets"),
+      "@": path.resolve(__dirname, "client", "src"),
+      "@shared": path.resolve(__dirname, "shared"),
+      "@assets": path.resolve(__dirname, "attached_assets"),
     },
   },
-  root: path.resolve(process.cwd(), "client"),
+  root: path.resolve(__dirname, "client"),
   optimizeDeps: {
-    include: ["date-fns", "qrcode.react", "@noble/secp256k1", "wouter"],
+    include: ["date-fns", "qrcode.react", "@noble/secp256k1", "wouter", "use-sync-external-store"],
   },
   build: {
     target: "esnext",
     minify: false,
-    outDir: path.resolve(process.cwd(), "dist", "public"),
+    outDir: path.resolve(__dirname, "dist", "public"),
     emptyOutDir: true,
     commonjsOptions: {
       include: [/node_modules/],
