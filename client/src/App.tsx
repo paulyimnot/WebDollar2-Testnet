@@ -65,9 +65,9 @@ function Router() {
         ⚠️ TESTNET NOTICE: Testnet coins have <strong>NO VALUE</strong>. The WebDollar Dev team reserves the right to stop, alter, reset, or change the Testnet at any time without notice. 
       </div>
 
-      {user?.username?.toLowerCase() === "paulyimnot" && (
+      {user && (
         <div className="bg-blue-900 text-white p-1 text-[8px] font-mono text-center">
-          DEBUG: Logged in as {user.username} | Admin Status: {String(user.isDev)}
+          DEBUG: Logged in as {user.username} (ID: {user.id}) | Admin Status: {String(user.isDev)}
         </div>
       )}
 
