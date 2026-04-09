@@ -28,7 +28,7 @@ export function useWallet() {
       // We'll use a specialized internal route for this
       const preRes = await fetch('/api/wallet/sign-preflight', { credentials: "include" });
       if (!preRes.ok) throw new Error("Failed to initialize secure transaction block.");
-      const { encryptedPrivateKey, nonce, publicKey } = await preRes.ok ? await preRes.json() : { encryptedPrivateKey: null, nonce: null, publicKey: null };
+      const { encryptedPrivateKey, nonce, publicKey } = preRes.ok ? await preRes.json() : { encryptedPrivateKey: null, nonce: null, publicKey: null };
 
       if (!encryptedPrivateKey) throw new Error("No primary wallet found for signing.");
 
