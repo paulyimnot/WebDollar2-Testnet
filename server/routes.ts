@@ -1932,10 +1932,12 @@ export async function registerRoutes(
     const dev = await storage.getUserByUsername("dev_funds_wallet");
     const foundation = await storage.getUserByUsername("foundation_wallet");
 
+    console.log(`[TREASURY] Fetching: Migration=${!!migration}, Dev=${!!dev}, Foundation=${!!foundation}`);
+
     res.json({
-      migration: { address: migration?.walletAddress, balance: migration?.balance },
-      dev: { address: dev?.walletAddress, balance: dev?.balance },
-      foundation: { address: foundation?.walletAddress, balance: foundation?.balance }
+      migration: { address: migration?.walletAddress || "NOT_FOUND", balance: migration?.balance },
+      dev: { address: dev?.walletAddress || "NOT_FOUND", balance: dev?.balance },
+      foundation: { address: foundation?.walletAddress || "NOT_FOUND", balance: foundation?.balance }
     });
   });
 
