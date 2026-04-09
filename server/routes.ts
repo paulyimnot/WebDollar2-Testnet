@@ -1704,6 +1704,53 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  // === SUPER-USER MANAGEMENT ROUTES ===
+  app.post("/api/admin/users/search", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    const { query } = req.body;
+    if (!query || typeof query !== "string") return res.status(400).json({ message: "Search query required" });
+
+    const results = await db.execute(sql`
+      SELECT id, username, wallet_address as "walletAddress", is_dev as "isDev", is_foundation as "isFoundation", created_at as "createdAt"
+      FROM users 
+      WHERE username ILIKE ${'%' + query + '%'} OR wallet_address ILIKE ${'%' + query + '%'}
+      LIMIT 10
+    `);
+
+    res.json(results.rows);
+  });
+
+  app.post("/api/admin/users/:id/update", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    const targetUserId = parseInt(req.params.id);
+    const { username, password, isDev, isFoundation } = req.body;
+
+    const [targetUser] = await db.select().from(users).where(eq(users.id, targetUserId)).limit(1);
+    if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+    const updateData: any = {};
+    if (username) updateData.username = username;
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 12);
+    }
+    if (typeof isDev === 'boolean') updateData.isDev = isDev;
+    if (typeof isFoundation === 'boolean') updateData.isFoundation = isFoundation;
+
+    await db.update(users).set(updateData).where(eq(users.id, targetUserId));
+    
+    res.json({ success: true, message: `User ${targetUser.username} updated successfully.` });
+  });
+
   app.post("/api/admin/conversions/:id/reject", async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
