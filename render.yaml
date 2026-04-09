@@ -12,6 +12,7 @@ services:
     buildCommand: npm install && npm run build
     startCommand: NODE_ENV=production npm start
     envVars:
+      # --- Deployment Nudge (Forces Render to refresh connection) ---
       - key: DATABASE_URL
         fromDatabase:
           name: webdollar2-db
@@ -19,7 +20,7 @@ services:
       - key: SESSION_SECRET
         sync: false
       - key: OPENAI_API_KEY
-        value: "sk-dummy_key"
+        value: "sk-optional"
       - key: PORT
         value: "5000"
       - key: NODE_ENV
