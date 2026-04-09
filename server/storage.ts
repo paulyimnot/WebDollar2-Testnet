@@ -130,6 +130,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(walletAddresses).where(eq(walletAddresses.userId, userId)).orderBy(desc(walletAddresses.isPrimary));
   }
 
+  async getPrimaryWalletAddress(userId: number): Promise<WalletAddress | undefined> {
+    const [addr] = await db.select().from(walletAddresses)
+      .where(and(eq(walletAddresses.userId, userId), eq(walletAddresses.isPrimary, true)))
+      .limit(1);
+    return addr;
+  }
+
+
   async getWalletAddress(id: number): Promise<WalletAddress | undefined> {
     const [addr] = await db.select().from(walletAddresses).where(eq(walletAddresses.id, id));
     return addr;
