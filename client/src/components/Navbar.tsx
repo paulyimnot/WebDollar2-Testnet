@@ -104,7 +104,7 @@ export function Navbar() {
                 </div>
                 <Button
                   variant="destructive"
-                  className="w-full py-8 text-lg font-black uppercase shadow-lg shadow-destructive/20 border-2 border-destructive/50"
+                  className="w-full max-w-sm mx-auto py-4 text-sm font-black uppercase shadow-md shadow-destructive/20 border border-destructive/50"
                   onClick={() => logout()}
                 >
                   Terminate Session
@@ -114,7 +114,7 @@ export function Navbar() {
             {!user && (
               <>
                 <Link href="/auth">
-                  <Button className="w-full py-8 text-xl font-black uppercase shadow-lg shadow-primary/20 btn-neon border-2 border-primary/50">Connect Wallet</Button>
+                  <Button className="w-full py-5 text-lg font-black uppercase shadow-lg shadow-primary/20 btn-neon border border-primary/50">Connect Wallet</Button>
                 </Link>
                 <div className="border-t border-primary/20 pt-4 flex flex-col space-y-2">
                   <NavItem href="/blackpaper" icon={BookOpen} className="py-4 text-base">Black Paper</NavItem>
