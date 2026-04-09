@@ -173,8 +173,32 @@ export default function Admin() {
           <h1 className="text-4xl font-heading text-accent" data-testid="text-admin-title">ADMIN PANEL</h1>
         </div>
         <p className="font-mono text-muted-foreground">
-          Review and manage legacy token conversion requests. Verify deposits on the old chain before approving.
+          Review and manage legacy token conversion requests and monitor network treasury reserves.
         </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="p-4 bg-black border border-accent/30 rounded-lg font-mono">
+          <div className="flex items-center gap-2 text-accent text-xs mb-2 uppercase">
+            <Rocket className="w-4 h-4" /> MIGRATION VAULT
+          </div>
+          <div className="text-xl text-white">43,200,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
+          <div className="text-[10px] text-muted-foreground mt-2 truncate">TARGET: EX-V1 COMMUNITY MIGRATION</div>
+        </div>
+        <div className="p-4 bg-black border border-primary/30 rounded-lg font-mono">
+          <div className="flex items-center gap-2 text-primary text-xs mb-2 uppercase">
+            <ShieldAlert className="w-4 h-4" /> DEV TREASURY
+          </div>
+          <div className="text-xl text-white">6,800,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
+          <div className="text-[10px] text-muted-foreground mt-2 truncate">10% GENESIS ALLOCATION</div>
+        </div>
+        <div className="p-4 bg-black border border-blue-500/30 rounded-lg font-mono">
+          <div className="flex items-center gap-2 text-blue-400 text-xs mb-2 uppercase">
+            <Users className="w-4 h-4" /> FOUNDATION RESERVE
+          </div>
+          <div className="text-xl text-white">3,400,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
+          <div className="text-[10px] text-muted-foreground mt-2 truncate">5% ECOSYSTEM GROWTH</div>
+        </div>
       </div>
 
       <div className="mb-8 p-4 bg-card border border-accent/20 rounded-md font-mono text-sm">
