@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { HelpChat } from "@/components/HelpChat";
+import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 
 import Home from "@/pages/Home";
@@ -24,6 +25,7 @@ import Security from "@/pages/Security";
 import NotFound from "@/pages/not-found";
 
 function Router() {
+  const { user } = useAuth();
   const [location] = useLocation();
   const [announcement, setAnnouncement] = useState(() => localStorage.getItem("webd2_announcement") || "");
 
@@ -62,6 +64,12 @@ function Router() {
       <div className="bg-red-900/90 text-white py-1.5 px-4 text-center font-mono text-[10px] sm:text-xs font-bold tracking-wide border-b border-red-500/50 sticky top-0 z-[100] shadow-[0_4px_20px_rgba(220,38,38,0.3)]">
         ⚠️ TESTNET NOTICE: Testnet coins have <strong>NO VALUE</strong>. The WebDollar Dev team reserves the right to stop, alter, reset, or change the Testnet at any time without notice. 
       </div>
+
+      {user?.username?.toLowerCase() === "paulyimnot" && (
+        <div className="bg-blue-900 text-white p-1 text-[8px] font-mono text-center">
+          DEBUG: Logged in as {user.username} | Admin Status: {String(user.isDev)}
+        </div>
+      )}
 
       {announcement && (
         <div className="bg-accent text-black py-2 px-4 text-center font-mono text-sm font-black tracking-widest relative z-[60] shadow-[0_4px_20px_rgba(255,193,44,0.3)] animate-pulse">
