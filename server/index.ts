@@ -25,7 +25,7 @@ app.set("trust proxy", 1); // Essential for accurate Render IP tracking before a
 const httpServer = createServer(app);
 
 // 🛡️ SECURITY SHIELD: HELMET CSP HARDENING
-const externalUrl = process.env.RENDER_EXTERNAL_URL || "https://webdollar2.onrender.com";
+const externalUrl = process.env.RENDER_EXTERNAL_URL || "https://webdollar2.com";
 
 app.use(helmet({
   contentSecurityPolicy: {
