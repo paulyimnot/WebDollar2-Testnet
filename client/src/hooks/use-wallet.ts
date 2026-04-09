@@ -87,10 +87,74 @@ export function useWallet() {
     },
   });
 
+  const privateTransferMutation = useMutation({
+    mutationFn: async (data: { recipientAddress: string; amount: string; password?: string }) => {
+      const { recipientAddress, amount, password } = data;
+      
+      if (!password) {
+        throw new Error("Password required for transaction signing.");
+      }
+
+      const preRes = await fetch('/api/wallet/sign-preflight', { credentials: "include" });
+      if (!preRes.ok) throw new Error("Failed to initialize secure transaction block.");
+      const { encryptedPrivateKey, nonce } = await preRes.json();
+
+      if (!encryptedPrivateKey) throw new Error("No primary wallet found for signing.");
+
+      let privateKey: string | null = await decryptPrivateKeyBrowser(encryptedPrivateKey, password);
+
+      const message = JSON.stringify({ 
+        recipientAddress: recipientAddress.trim(), 
+        amount: parseFloat(amount).toString(), 
+        nonce 
+      });
+      
+      const signature = await signTransaction(message, privateKey);
+      privateKey = null;
+
+      const res = await fetch("/api/wallet/transfer/private", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          recipientAddress, 
+          amount, 
+          signature, 
+          nonce 
+        }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Private transfer failed");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.wallet.get.path] });
+      queryClient.invalidateQueries({ queryKey: [api.wallet.addresses.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.explorer.transactions.path] });
+      queryClient.invalidateQueries({ queryKey: [api.transactions.mine.path] });
+      toast({
+        title: "PRIVATE TRANSFER CONFIRMED",
+        description: "Funds transferred privately.",
+        className: "border-accent text-accent bg-card font-mono",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "TRANSFER FAILED",
+        description: error.message,
+        variant: "destructive",
+        className: "font-mono border-destructive bg-black text-destructive",
+      });
+    },
+  });
+
   return {
     wallet,
     isLoadingWallet,
     transfer: transferMutation.mutate,
-    isTransferring: transferMutation.isPending,
+    privateTransfer: privateTransferMutation.mutate,
+    isTransferring: transferMutation.isPending || privateTransferMutation.isPending,
   };
 }

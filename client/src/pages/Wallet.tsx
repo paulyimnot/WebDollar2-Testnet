@@ -18,7 +18,7 @@ import { calculatePoW } from "@/lib/crypto";
 export default function Wallet() {
   const [_, setLocation] = useLocation();
   const { user } = useAuth();
-  const { wallet, transfer, isTransferring } = useWallet();
+  const { wallet, transfer, privateTransfer, isTransferring } = useWallet();
   const { stakingInfo } = useStaking();
   const { addresses, createAddress, isCreating, getPhrase, lockAddress, unlockAddress, deleteAddress } = useAddresses();
   const { toast } = useToast();
@@ -178,30 +178,11 @@ export default function Wallet() {
     }
 
     if (isPrivate) {
-      // Private transfer — uses separate API endpoint, masks addresses
-      try {
-        const resp = await fetch('/api/wallet/transfer/private', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ recipientAddress: finalRecipient, amount, password: txPassword }),
-          credentials: 'include'
-        });
-        if (resp.ok) {
-          queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/addresses"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/transactions/mine"] });
-          toast({ title: "PRIVATE TRANSFER CONFIRMED", description: `Sent ${amount} WD2 privately.`, className: "border-accent text-accent bg-card font-mono" });
-          setRecipient("");
-          setAmount("");
-          setTxPassword("");
-        } else {
-          const err = await resp.json().catch(() => ({ message: "Transfer failed" }));
-          toast({ title: "TRANSFER FAILED", description: err.message, variant: "destructive", className: "font-mono" });
-        }
-      } catch {
-        toast({ title: "TRANSFER FAILED", description: "Network error.", variant: "destructive", className: "font-mono" });
-      }
+      // Private transfer — uses secure signature hook
+      privateTransfer({ recipientAddress: finalRecipient, amount, password: txPassword });
+      setRecipient("");
+      setAmount("");
+      setTxPassword("");
     } else {
       // Normal transfer — signed logic
       transfer({ recipientAddress: finalRecipient, amount, password: txPassword });
