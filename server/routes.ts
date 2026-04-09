@@ -884,6 +884,10 @@ export async function registerRoutes(
    app.post("/api/wallet/testnet-faucet", async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    if (isBlockchainPaused) {
+      return res.status(503).json({ message: "Network is currently paused for maintenance. Please try again later." });
+    }
     
     try {
       const { challenge, nonce } = req.body;
@@ -916,6 +920,11 @@ export async function registerRoutes(
         // @ts-ignore
       const user = await storage.getUser(req.session.userId);
       if (!user) return res.status(401).json({ message: "User not found" });
+
+      const isSenderBlocked = await storage.isWalletBlocked(user.walletAddress!);
+      if (isSenderBlocked) {
+        return res.status(403).json({ message: "Your wallet is blacklisted from the network." });
+      }
 
       // Check 24 hour limit via database transactions
       const userTxs = await storage.getUserTransactions(user.id);
@@ -1204,12 +1213,21 @@ export async function registerRoutes(
   app.post(api.staking.stake.path, async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    if (isBlockchainPaused) {
+      return res.status(503).json({ message: "Network is currently paused for maintenance. Please try again later." });
+    }
     
     try {
       // Use a fresh query to avoid stale session data
       // @ts-ignore
       const user = await storage.getUser(req.session.userId);
       if (!user) return res.status(404).json({ message: "User not found" });
+
+      const isSenderBlocked = await storage.isWalletBlocked(user.walletAddress!);
+      if (isSenderBlocked) {
+        return res.status(403).json({ message: "Your wallet is blacklisted from the network." });
+      }
 
       if (user.stakingStoppedAt) {
         const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -1272,11 +1290,20 @@ export async function registerRoutes(
   app.post(api.staking.unstake.path, async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    if (isBlockchainPaused) {
+      return res.status(503).json({ message: "Network is currently paused for maintenance. Please try again later." });
+    }
     
     try {
       // @ts-ignore
       const user = await storage.getUser(req.session.userId);
       if (!user) return res.status(404).json({ message: "User not found" });
+
+      const isSenderBlocked = await storage.isWalletBlocked(user.walletAddress!);
+      if (isSenderBlocked) {
+        return res.status(403).json({ message: "Your wallet is blacklisted from the network." });
+      }
 
       const currentStaked = parseFloat(user.stakedBalance || "0");
       if (currentStaked <= 0) {
@@ -1306,9 +1333,19 @@ export async function registerRoutes(
   app.post('/api/staking/change-amount', async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    if (isBlockchainPaused) {
+      return res.status(503).json({ message: "Network is currently paused for maintenance. Please try again later." });
+    }
+
     // @ts-ignore
     const user = await storage.getUser(req.session.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isSenderBlocked = await storage.isWalletBlocked(user.walletAddress!);
+    if (isSenderBlocked) {
+      return res.status(403).json({ message: "Your wallet is blacklisted from the network." });
+    }
 
     if (user.stakingStoppedAt) {
       return res.status(400).json({ message: "Cannot change amount while on hold. Wait for the 7-day hold to expire." });
@@ -1404,7 +1441,20 @@ export async function registerRoutes(
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
 
+    if (isBlockchainPaused) {
+      return res.status(503).json({ message: "Network is currently paused for maintenance. Migrations are temporarily disabled." });
+    }
+
     try {
+      // @ts-ignore
+      const user = await storage.getUser(req.session.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const isSenderBlocked = await storage.isWalletBlocked(user.walletAddress!);
+      if (isSenderBlocked) {
+        return res.status(403).json({ message: "Your wallet is blacklisted from the network." });
+      }
+
       const input = api.conversion.create.input.parse(req.body);
       const amount = parseFloat(input.amountClaimed);
 
