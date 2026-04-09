@@ -1730,12 +1730,12 @@ export async function registerRoutes(
 
     try {
       // Create Wallets:
-      // 10% Dev funds = 4,800,000,000
-      await createGenesisUser("dev_funds_wallet", "4800000000", true, false);
-      // 5% Foundation = 2,400,000,000
-      await createGenesisUser("foundation_wallet", "2400000000", false, true);
-      // Migration Minus Dev = 48B - 4.8B(Dev 1) - 2.4B(Found) - 4.8B(OldDev) = 36B
-      await createGenesisUser("migration_wallet", "36000000000", false, false);
+      // 10% Dev funds = 6,800,000,000
+      await createGenesisUser("dev_funds_wallet", "6800000000", true, false);
+      // 5% Foundation = 3,400,000,000
+      await createGenesisUser("foundation_wallet", "3400000000", false, true);
+      // Migration = 48B (V1 Supply) - 4.8B (Old Dev 10%) = 43.2B
+      await createGenesisUser("migration_wallet", "43200000000", false, false);
       
       res.json({ success: true, message: "Genesis complete: Dev, Foundation, and Migration wallets instantiated successfully." });
     } catch(err) {

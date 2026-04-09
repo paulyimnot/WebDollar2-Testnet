@@ -10,10 +10,10 @@ import { formatDistanceToNow } from "date-fns";
 import logoImg from "@assets/1771108919092_1771109065229.jpg";
 
 const TOKENOMICS_DATA = [
-  { name: 'V1 Migration Reserve', value: 36, color: '#FFD54F' },
-  { name: 'Developer Funds', value: 4.8, color: '#FFA000' },
-  { name: 'Old Dev Funds (Blocked)', value: 4.8, color: '#FF8F00' },
-  { name: 'Foundation Fund', value: 2.4, color: '#FFC107' },
+  { name: 'V1 Migration Reserve', value: 43.2, color: '#FFD54F' },
+  { name: 'Public Mining & Staking', value: 14.6, color: '#FFC107' },
+  { name: 'Developer Funds', value: 6.8, color: '#FFA000' },
+  { name: 'Foundation Fund', value: 3.4, color: '#D4AF37' },
 ];
 
 const FEATURES = [
@@ -159,30 +159,34 @@ export default function Home() {
             >
               <h2 className="text-4xl font-heading text-accent mb-4">TOKENOMICS</h2>
               <p className="font-mono text-muted-foreground leading-relaxed">
-                WDollar 2 introduces a total capped supply of 48 Billion WEBD2. 
+                WDollar 2 introduces a total capped supply of 68 Billion WEBD2, designed to sustain public mining emissions for 100 years.
                 The Migration Reserve is strictly allocated for active claims, effectively burning unverified V1 developer funds.
               </p>
 
               <div className="space-y-4 font-mono text-sm">
                 <div className="flex justify-between flex-wrap gap-1 border-b border-primary/20 py-2">
                   <span>TOTAL SUPPLY</span>
-                  <span className="text-accent font-bold">48,000,000,000 WEBD2</span>
+                  <span className="text-accent font-bold">68,000,000,000 WEBD2</span>
                 </div>
                 <div className="flex justify-between flex-wrap gap-1 border-b border-primary/20 py-2">
-                  <span>V1 MIGRATION RESERVE</span>
-                  <span className="text-primary font-bold">36,000,000,000 WEBD2</span>
+                  <span>V1 MIGRATION RESERVE (48B V1 MINUS 10% DEV)</span>
+                  <span className="text-primary font-bold">43,200,000,000 WEBD2</span>
+                </div>
+                <div className="flex justify-between flex-wrap gap-1 border-b border-primary/20 py-2">
+                  <span>PUBLIC MINING CACHE</span>
+                  <span className="text-accent">14,600,000,000 WEBD2</span>
                 </div>
                 <div className="flex justify-between flex-wrap gap-1 border-b border-primary/20 py-2">
                   <span>DEVELOPER RESERVE (10%)</span>
-                  <span className="text-primary/70">4,800,000,000 WEBD2</span>
+                  <span className="text-primary/70">6,800,000,000 WEBD2</span>
                 </div>
                 <div className="flex justify-between flex-wrap gap-1 border-b border-primary/20 py-2">
                   <span>FOUNDATION FUND (5%)</span>
-                  <span className="text-primary/70">2,400,000,000 WEBD2</span>
+                  <span className="text-primary/70">3,400,000,000 WEBD2</span>
                 </div>
                 <div className="flex justify-between flex-wrap gap-1 border-b border-primary/20 py-2">
-                  <span>OLD DEV FUNDS (MINUS 10%)</span>
-                  <span className="text-red-400">4,800,000,000 WEBD2</span>
+                  <span>OLD DEV FUNDS (BLOCKED)</span>
+                  <span className="text-red-400">BURNED</span>
                 </div>
                 <div className="mt-4 pt-2 text-xs text-muted-foreground italic border-l-2 border-primary/50 pl-4 bg-primary/5 p-2 rounded-sm">
                   * Note: Emission halving occurs every 3 years. Initial block reward is 1,150 WEBD2 with an execution block time of 5 seconds. V1 migration has a strict active-claim deadline.
