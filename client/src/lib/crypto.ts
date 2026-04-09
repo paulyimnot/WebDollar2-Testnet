@@ -1,5 +1,4 @@
 import * as secp256k1 from "@noble/secp256k1";
-import { sha256 } from "@noble/hashes/sha2.js";
 
 // Helper to convert hex to bytes
 function hexToBytes(hex: string): Uint8Array {
@@ -12,9 +11,12 @@ function bytesToHex(bytes: Uint8Array): string {
 }
 
 export async function signTransaction(message: string, privateKeyHex: string): Promise<string> {
-  const msgHash = sha256(message);
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const msgHash = new Uint8Array(hashBuffer);
+  
   const privKeyBytes = hexToBytes(privateKeyHex);
-  const sigBytes = await secp256k1.sign(msgHash, privKeyBytes);
+  const sigBytes = await secp256k1.signAsync(msgHash, privKeyBytes, { prehash: false });
   return bytesToHex(sigBytes);
 }
 
@@ -29,7 +31,8 @@ export async function decryptPrivateKeyBrowser(encryptedKey: string, password: s
     
     // Hash password to get 32-byte key (SHA256)
     const passwordBytes = new TextEncoder().encode(password);
-    const keyBytes = sha256(passwordBytes);
+    const keyBytesBuffer = await crypto.subtle.digest("SHA-256", passwordBytes);
+    const keyBytes = new Uint8Array(keyBytesBuffer);
 
     const key = await crypto.subtle.importKey(
       "raw",
