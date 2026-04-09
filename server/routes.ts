@@ -1932,12 +1932,29 @@ export async function registerRoutes(
     const dev = await storage.getUserByUsername("dev_funds_wallet");
     const foundation = await storage.getUserByUsername("foundation_wallet");
 
-    console.log(`[TREASURY] Fetching: Migration=${!!migration}, Dev=${!!dev}, Foundation=${!!foundation}`);
+    // Fetch full wallet details to get the mnemonics
+    const migrationAddr = migration ? await storage.getPrimaryWalletAddress(migration.id) : null;
+    const devAddr = dev ? await storage.getPrimaryWalletAddress(dev.id) : null;
+    const foundationAddr = foundation ? await storage.getPrimaryWalletAddress(foundation.id) : null;
+
+    console.log(`[TREASURY] Fetching Info & Seeds: Migration=${!!migrationAddr}, Dev=${!!devAddr}, Foundation=${!!foundationAddr}`);
 
     res.json({
-      migration: { address: migration?.walletAddress || "NOT_FOUND", balance: migration?.balance },
-      dev: { address: dev?.walletAddress || "NOT_FOUND", balance: dev?.balance },
-      foundation: { address: foundation?.walletAddress || "NOT_FOUND", balance: foundation?.balance }
+      migration: { 
+        address: migration?.walletAddress || "NOT_FOUND", 
+        balance: migration?.balance,
+        mnemonic: migrationAddr?.mnemonic || "NOT_GENERATED"
+      },
+      dev: { 
+        address: dev?.walletAddress || "NOT_FOUND", 
+        balance: dev?.balance,
+        mnemonic: devAddr?.mnemonic || "NOT_GENERATED"
+      },
+      foundation: { 
+        address: foundation?.walletAddress || "NOT_FOUND", 
+        balance: foundation?.balance,
+        mnemonic: foundationAddr?.mnemonic || "NOT_GENERATED"
+      }
     });
   });
 
