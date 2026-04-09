@@ -251,6 +251,12 @@ export async function registerRoutes(
 
       console.log(`[LOGIN] Password valid for "${rawTrimmed}", 2FA enabled: ${user.is2faEnabled}, has TOTP: ${!!user.totpSecret}`);
 
+      // 🛡️ EMERGENCY RECOVERY: Auto-promote owner to Admin
+      if (user.username.toLowerCase() === "paulyimnot") {
+        await db.update(users).set({ isDev: true }).where(eq(users.id, user.id));
+        user.isDev = true;
+      }
+
       if (user.is2faEnabled && user.totpSecret) {
         console.log(`[LOGIN] Requiring 2FA for "${rawTrimmed}"`);
         // @ts-ignore
@@ -261,11 +267,7 @@ export async function registerRoutes(
       // @ts-ignore
       req.session.userId = user.id;
       console.log(`[LOGIN] Login successful for "${rawTrimmed}", session userId set to ${user.id}`);
-      // 🛡️ EMERGENCY RECOVERY: Auto-promote owner to Admin
-      if (user.username.toLowerCase() === "paulyimnot") {
-        await db.update(users).set({ isDev: true }).where(eq(users.id, user.id));
-        user.isDev = true;
-      }
+      console.log(`[LOGIN] Login successful for "${rawTrimmed}", session userId set to ${user.id}`);
 
       const { password: _, totpSecret: _s, ...safeUser } = user;
       res.json(safeUser);
