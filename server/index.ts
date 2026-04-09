@@ -24,6 +24,8 @@ const app = express();
 const httpServer = createServer(app);
 
 // 🛡️ SECURITY SHIELD: HELMET CSP HARDENING
+const externalUrl = process.env.RENDER_EXTERNAL_URL || "https://webdollar2.onrender.com";
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -31,7 +33,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdnjs.cloudflare.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https:", "http:"],
-      connectSrc: ["'self'", "wss:", "ws:", "https://webdollar2.onrender.com"],
+      connectSrc: ["'self'", "wss:", "ws:", externalUrl],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
@@ -104,7 +106,7 @@ async function initStripe() {
     const stripeSync = await getStripeSync();
 
     const replitDomain = process.env.REPLIT_DOMAINS?.split(",")[0];
-    const webhookBaseUrl = replitDomain ? `https://${replitDomain}` : "https://webdollar2.onrender.com";
+    const webhookBaseUrl = isReplit ? `https://${replitDomain}` : externalUrl;
     const webhookResult = await stripeSync.findOrCreateManagedWebhook(
       `${webhookBaseUrl}/api/stripe/webhook`
     );
