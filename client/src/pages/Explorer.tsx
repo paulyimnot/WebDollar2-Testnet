@@ -122,7 +122,6 @@ export default function Explorer() {
                 <div key={`addr-${idx}`} className="p-3 border border-primary/10 rounded-md font-mono text-sm" data-testid={`search-result-address-${idx}`}>
                   <div className="text-xs text-accent mb-1">WALLET ADDRESS</div>
                   <div className="text-white text-base">{addr.address}</div>
-                  {addr.polygonAddress && <div className="text-purple-400/70 text-base mt-1">{addr.polygonAddress}</div>}
                   <div className="text-muted-foreground text-xs mt-1">Balance: {Number(addr.balance || 0).toLocaleString()} WEBD2</div>
                 </div>
               ))}

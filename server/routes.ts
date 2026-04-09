@@ -2007,16 +2007,15 @@ export async function registerRoutes(
     if (q.startsWith("WEBD$")) {
       const addr = await storage.getWalletAddressByAddress(q);
       if (addr) {
-        results.addresses.push({ address: addr.address, polygonAddress: addr.polygonAddress, label: addr.label, balance: addr.balance });
+        // Omitting polygonAddress from the returned packet
+        results.addresses.push({ address: addr.address, label: addr.label, balance: addr.balance });
       }
       const user = await storage.getUserByWalletAddress(q);
       if (user) {
-        results.users.push({ username: user.username, walletAddress: user.walletAddress, polygonAddress: user.polygonAddress });
+        results.users.push({ username: user.username, walletAddress: user.walletAddress });
       }
-    }
-
-    if (/^0x[a-fA-F0-9]{40}$/.test(q)) {
-      const txs = await storage.getTransactions(50);
+      
+      const txs = await storage.getTransactions(100);
       for (const tx of txs) {
         if (tx.senderAddress === q || tx.receiverAddress === q) {
           results.transactions.push(tx);
