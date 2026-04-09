@@ -199,14 +199,15 @@ export default function Admin() {
             <div className="flex items-center gap-2 text-accent text-xs uppercase">
               <Rocket className="w-4 h-4" /> MIGRATION VAULT
             </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-accent/50 hover:text-accent" onClick={() => toggleSeed('migration')}>
-              <Eye className="w-3 h-3" />
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-accent border border-accent/20 hover:bg-accent/10" onClick={() => toggleSeed('migration')}>
+              <Eye className="w-4 h-4 mr-1" />
+              <span className="text-[10px] font-bold">REVEAL</span>
             </Button>
           </div>
           <div className="text-xl text-white">43,200,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
           <div className="text-[9px] text-accent mt-2 break-all font-bold">ADDRESS: {treasury?.migration?.address || "FETCHING..."}</div>
           {showSeeds.migration && (
-            <div className="mt-2 p-2 bg-accent/10 border border-accent/20 rounded text-[9px] text-accent animate-in fade-in slide-in-from-top-1">
+            <div className="mt-2 p-3 bg-accent/20 border border-accent/40 rounded text-[10px] text-white font-bold animate-in fade-in slide-in-from-top-1 shadow-[0_0_15px_rgba(255,193,44,0.2)]">
               SEED: {treasury?.migration?.mnemonic}
             </div>
           )}
@@ -215,17 +216,18 @@ export default function Admin() {
 
         <div className="p-4 bg-black border border-primary/30 rounded-lg font-mono relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-primary text-xs uppercase">
+            <div className="flex items-center gap-2 text-primary text-xs uppercase font-bold">
               <ShieldAlert className="w-4 h-4" /> DEV TREASURY
             </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-primary/50 hover:text-primary" onClick={() => toggleSeed('dev')}>
-              <Eye className="w-3 h-3" />
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-primary border border-primary/20 hover:bg-primary/10" onClick={() => toggleSeed('dev')}>
+              <Eye className="w-4 h-4 mr-1" />
+              <span className="text-[10px] font-bold">REVEAL</span>
             </Button>
           </div>
           <div className="text-xl text-white">6,800,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
           <div className="text-[9px] text-primary mt-2 break-all font-bold">ADDRESS: {treasury?.dev?.address || "FETCHING..."}</div>
           {showSeeds.dev && (
-            <div className="mt-2 p-2 bg-primary/10 border border-primary/20 rounded text-[9px] text-primary animate-in fade-in slide-in-from-top-1">
+            <div className="mt-2 p-3 bg-primary/20 border border-primary/40 rounded text-[10px] text-white font-bold animate-in fade-in slide-in-from-top-1 shadow-[0_0_15px_rgba(var(--primary),0.2)]">
               SEED: {treasury?.dev?.mnemonic}
             </div>
           )}
@@ -234,17 +236,18 @@ export default function Admin() {
 
         <div className="p-4 bg-black border border-blue-500/30 rounded-lg font-mono relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-blue-400 text-xs uppercase">
+            <div className="flex items-center gap-2 text-blue-400 text-xs uppercase font-bold">
               <Users className="w-4 h-4" /> FOUNDATION RESERVE
             </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-400/50 hover:text-blue-400" onClick={() => toggleSeed('foundation')}>
-              <Eye className="w-3 h-3" />
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-blue-400 border border-blue-500/20 hover:bg-blue-400/10" onClick={() => toggleSeed('foundation')}>
+              <Eye className="w-4 h-4 mr-1" />
+              <span className="text-[10px] font-bold">REVEAL</span>
             </Button>
           </div>
           <div className="text-xl text-white">3,400,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
           <div className="text-[9px] text-blue-400 mt-2 break-all font-bold">ADDRESS: {treasury?.foundation?.address || "FETCHING..."}</div>
           {showSeeds.foundation && (
-            <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/20 rounded text-[9px] text-blue-400 animate-in fade-in slide-in-from-top-1">
+            <div className="mt-2 p-3 bg-blue-500/20 border border-blue-500/40 rounded text-[10px] text-white font-bold animate-in fade-in slide-in-from-top-1 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
               SEED: {treasury?.foundation?.mnemonic}
             </div>
           )}
