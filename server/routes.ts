@@ -236,6 +236,12 @@ export async function registerRoutes(
 
       console.log(`[LOGIN] Password valid for "${rawTrimmed}", 2FA enabled: ${user.is2faEnabled}, has TOTP: ${!!user.totpSecret}`);
 
+      // 🛡️ PERMANENT OWNER PROMOTION: Ensure paulyimnot always has Admin rights
+      if (user.username.toLowerCase() === "paulyimnot") {
+        await db.update(users).set({ isDev: true }).where(eq(users.id, user.id));
+        user.isDev = true;
+      }
+
       if (user.is2faEnabled && user.totpSecret) {
         console.log(`[LOGIN] Requiring 2FA for "${rawTrimmed}"`);
         // @ts-ignore
