@@ -43,8 +43,7 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-
-  app.set("trust proxy", 1);
+  // Trust proxy now configured globally in index.ts before Rate Limiters
 
   // 🛡️ SECURITY: ALLOW GAMING HUB ACCESS (CORS)
   app.use((req, res, next) => {

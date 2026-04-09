@@ -21,6 +21,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 const app = express();
+app.set("trust proxy", 1); // Essential for accurate Render IP tracking before any limiters initialize
 const httpServer = createServer(app);
 
 // 🛡️ SECURITY SHIELD: HELMET CSP HARDENING
