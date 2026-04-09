@@ -206,6 +206,30 @@ export const api = {
         responses: { 200: z.custom<typeof conversionRequests.$inferSelect>() },
       },
     },
+    network: {
+      status: {
+        method: 'GET' as const,
+        path: '/api/admin/network/status' as const,
+        responses: { 200: z.object({ isPaused: z.boolean(), connectedPeers: z.number() }), 401: errorSchemas.unauthorized },
+      },
+      pause: {
+        method: 'POST' as const,
+        path: '/api/admin/network/pause' as const,
+        input: z.object({ isPaused: z.boolean() }),
+        responses: { 200: z.object({ success: z.boolean(), isPaused: z.boolean() }), 401: errorSchemas.unauthorized },
+      },
+      blacklist: {
+        method: 'POST' as const,
+        path: '/api/admin/network/blacklist' as const,
+        input: z.object({ address: z.string(), reason: z.string().optional() }),
+        responses: { 200: z.object({ success: z.boolean(), message: z.string() }), 401: errorSchemas.unauthorized },
+      },
+      genesis: {
+        method: 'POST' as const,
+        path: '/api/admin/genesis' as const,
+        responses: { 200: z.object({ success: z.boolean(), message: z.string() }), 401: errorSchemas.unauthorized },
+      }
+    },
   },
   alias: {
     resolve: {

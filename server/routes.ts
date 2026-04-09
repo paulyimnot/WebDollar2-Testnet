@@ -19,8 +19,10 @@ import OpenAI from "openai";
 const PostgresStore = pgSession(session);
 import { pool } from "./db.js";
 
+import { getConnectedPeersCount } from "./signaling.js";
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const faucetIpStamps = new Map<string, number>();
+export let isBlockchainPaused = false;
 
 function rateLimit(key: string, maxAttempts: number, windowMs: number): boolean {
   const now = Date.now();
@@ -714,6 +716,10 @@ export async function registerRoutes(
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
 
+    if (isBlockchainPaused) {
+      return res.status(503).json({ message: "Network is currently paused for maintenance. Please try again later." });
+    }
+
     const { recipientAddress, amount } = req.body;
 
     if (!recipientAddress || typeof recipientAddress !== "string" || recipientAddress.trim().length < 5) {
@@ -732,6 +738,11 @@ export async function registerRoutes(
     // @ts-ignore
     const sender = await storage.getUser(req.session.userId);
     if (!sender) return res.status(401).json({ message: "User not found" });
+
+    const isSenderBlocked = await storage.isWalletBlocked(sender.walletAddress!);
+    if (isSenderBlocked) {
+      return res.status(403).json({ message: "Your wallet is blacklisted from the network." });
+    }
 
     // 🛡️ WAVE 1: CRITICAL SIGNATURE VERIFICATION (Audit Point 10)
     const { signature, nonce } = req.body;
@@ -801,6 +812,10 @@ export async function registerRoutes(
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
 
+    if (isBlockchainPaused) {
+      return res.status(503).json({ message: "Network is currently paused for maintenance. Please try again later." });
+    }
+
     const { recipientAddress, amount } = req.body;
     if (!recipientAddress || !amount) {
       return res.status(400).json({ message: "Recipient and amount are required" });
@@ -814,6 +829,11 @@ export async function registerRoutes(
     // @ts-ignore
     const sender = await storage.getUser(req.session.userId);
     if (!sender) return res.status(401).json({ message: "User not found" });
+
+    const isSenderBlocked = await storage.isWalletBlocked(sender.walletAddress!);
+    if (isSenderBlocked) {
+      return res.status(403).json({ message: "Your wallet is blacklisted from the network." });
+    }
 
     if (sender.walletAddress === recipientAddress.trim()) {
       return res.status(400).json({ message: "Cannot transfer to yourself" });
@@ -1622,6 +1642,108 @@ export async function registerRoutes(
     }
   });
 
+  // === Admin Network & Blockchain Control ===
+  app.get("/api/admin/network/status", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    res.json({ isPaused: isBlockchainPaused, connectedPeers: getConnectedPeersCount() });
+  });
+
+  app.post("/api/admin/network/pause", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    const { isPaused } = req.body;
+    isBlockchainPaused = !!isPaused;
+    
+    // Announce to log
+    console.log(`[ADMIN] Blockchain Paused State: ${isBlockchainPaused} by ${admin.username}`);
+    
+    res.json({ success: true, isPaused: isBlockchainPaused });
+  });
+
+  app.post("/api/admin/network/blacklist", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    const { address, reason } = req.body;
+    if (!address) return res.status(400).json({ message: "Address is required" });
+
+    try {
+      await db.insert(blockedWallets).values({ address, reason: reason || "Admin action" });
+      res.json({ success: true, message: `Wallet ${address} successfully blacklisted.` });
+    } catch(err) {
+      res.status(500).json({ success: false, message: "Could not blacklist (might already be blacklisted)." });
+    }
+  });
+
+  app.post("/api/admin/genesis", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    // Protect against double minting
+    const existingMigration = await storage.getUserByUsername("migration_wallet");
+    if (existingMigration) return res.status(400).json({ message: "Genesis wallets already generated." });
+
+    const MINT_PASSWORD = "AUTO_GENESIS_SECURE_PASSWORD"; // For system auto-creation
+
+    const createGenesisUser = async (username: string, amount: string, isDevFlag: boolean, isFoundationFlag: boolean) => {
+        const hashedPassword = await bcrypt.hash(MINT_PASSWORD, 12);
+        const wallet = generateWallet();
+        const user = await storage.createUser({
+          username,
+          password: hashedPassword,
+          walletAddress: wallet.address,
+          polygonAddress: wallet.polygonAddress,
+          balance: amount,
+          isDev: isDevFlag,
+          isFoundation: isFoundationFlag,
+          nonce: 0
+        });
+
+        const encryptedKey = encryptPrivateKey(wallet.privateKey, MINT_PASSWORD);
+        await storage.createWalletAddress({
+          userId: user.id,
+          label: "Genesis Wallet",
+          address: wallet.address,
+          polygonAddress: wallet.polygonAddress,
+          publicKey: wallet.publicKey,
+          encryptedPrivateKey: encryptedKey,
+          mnemonic: wallet.mnemonic,
+          isPrimary: true,
+        });
+        return user;
+    };
+
+    try {
+      // Create Wallets:
+      // 10% Dev funds = 4,800,000,000
+      await createGenesisUser("dev_funds_wallet", "4800000000", true, false);
+      // 5% Foundation = 2,400,000,000
+      await createGenesisUser("foundation_wallet", "2400000000", false, true);
+      // Migration Minus Dev = 48B - 4.8B(Dev 1) - 2.4B(Found) - 4.8B(OldDev) = 36B
+      await createGenesisUser("migration_wallet", "36000000000", false, false);
+      
+      res.json({ success: true, message: "Genesis complete: Dev, Foundation, and Migration wallets instantiated successfully." });
+    } catch(err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed during genesis process." });
+    }
+  });
+
   // === Blockchain / WebDollar 2 Routes ===
 
   app.get("/api/blockchain/status", async (_req, res) => {
@@ -1639,6 +1761,32 @@ export async function registerRoutes(
       });
     } catch (err: any) {
       res.json({ connected: false, network: "Unknown", chainId: null, blockNumber: null, tokenContract: null });
+    }
+  });
+
+  app.get("/api/network/stats", async (_req, res) => {
+    try {
+      const dbUsers = await db.select({ count: sql<number>`count(*)` }).from(users);
+      const dbBlocks = await db.select({ count: sql<number>`count(*)` }).from(blocks);
+      const dbTxs = await db.select({ count: sql<number>`count(*)` }).from(transactions);
+      
+      const latestBlock = await storage.getLatestBlock();
+      
+      // Calculate circulating supply (simplified)
+      const supplyResult = await db.execute(sql`SELECT SUM(balance) as total FROM users`);
+      // @ts-ignore
+      const circulatingSupply = supplyResult[0]?.total || "43600000000";
+
+      res.json({
+        totalUsers: Number(dbUsers[0]?.count || 0),
+        totalBlocks: Number(dbBlocks[0]?.count || 0),
+        totalTransactions: Number(dbTxs[0]?.count || 0),
+        circulatingSupply: String(circulatingSupply),
+        latestBlockTime: latestBlock?.timestamp || null,
+        connectedPeers: getConnectedPeersCount(),
+      });
+    } catch(err) {
+      res.status(500).json({ message: "Failed to fetch network stats" });
     }
   });
 

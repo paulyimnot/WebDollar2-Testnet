@@ -1,7 +1,12 @@
 import { WebSocketServer, WebSocket } from "ws";
 
+const peers = new Map<string, { ws: WebSocket; id: string; links: Set<string> }>();
+
+export function getConnectedPeersCount(): number {
+  return peers.size;
+}
+
 export function setupSignaling(server: any) {
-  const peers = new Map<string, { ws: WebSocket; id: string; links: Set<string> }>();
   let nextId = 1;
 
   const wss = new WebSocketServer({ server });
