@@ -101,7 +101,7 @@ export default function Explorer() {
             </button>
           )}
         </div>
-        <Button onClick={handleSearch} disabled={isSearching || searchQuery.trim().length < 3} className="btn-neon shrink-0 w-full sm:w-auto py-8 px-10 text-xl font-black uppercase tracking-widest" data-testid="button-search">
+        <Button onClick={handleSearch} disabled={isSearching || searchQuery.trim().length < 3} className="btn-neon shrink-0 w-full sm:w-[200px] py-6 text-sm font-bold uppercase tracking-widest" data-testid="button-search">
           {isSearching ? <Loader2 className="w-6 h-6 animate-spin" /> : "FIND DATA"}
         </Button>
       </div>
