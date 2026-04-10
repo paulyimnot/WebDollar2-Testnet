@@ -1241,7 +1241,7 @@ export async function registerRoutes(
             if (minerWalletAddr) {
               const addrBal = parseFloat(minerWalletAddr.balance || "0");
               await tx.update(walletAddresses)
-                .set({ balance: (addrBal + trueRewards).toFixed(4) })
+                .set({ balance: ((isNaN(addrBal) ? 0 : addrBal) + trueRewards).toFixed(4) })
                 .where(eq(walletAddresses.id, minerWalletAddr.id));
             }
 

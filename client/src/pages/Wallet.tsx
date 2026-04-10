@@ -204,7 +204,12 @@ export default function Wallet() {
   };
 
   const stakedNum = parseFloat(stakingInfo?.stakedBalance || "0");
-  const totalBalance = addresses?.reduce((sum: number, addr: any) => sum + Number(addr.balance || 0), 0) || Number(wallet?.balance || 0);
+  const addrTotal = addresses?.reduce((sum: number, addr: any) => {
+    const v = parseFloat(addr.balance || "0");
+    return sum + (isNaN(v) ? 0 : v);
+  }, 0) ?? 0;
+  const userBalance = parseFloat((user as any)?.balance || "0");
+  const totalBalance = (addrTotal > 0 ? addrTotal : (isNaN(userBalance) ? 0 : userBalance));
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
@@ -239,7 +244,7 @@ export default function Wallet() {
         <div className="w-full lg:w-auto text-left lg:text-right flex flex-col items-start lg:items-end bg-primary/5 lg:bg-transparent p-4 lg:p-0 rounded-lg border border-primary/10 lg:border-0">
           <div className="text-xs font-mono text-muted-foreground tracking-widest uppercase mb-1">TOTAL AVAILABLE BALANCE</div>
           <div className="text-4xl md:text-6xl font-mono text-accent text-gold-glow font-black flex items-baseline gap-2 tracking-tighter" data-testid="text-balance">
-            {totalBalance.toLocaleString(undefined, { minimumFractionDigits: 4 })} <span className="text-xl md:text-2xl text-primary font-bold tracking-normal">WEBD2</span>
+            {(isNaN(totalBalance) ? 0 : totalBalance).toLocaleString(undefined, { minimumFractionDigits: 4 })} <span className="text-xl md:text-2xl text-primary font-bold tracking-normal">WEBD2</span>
           </div>
           <div className="text-base md:text-lg font-mono text-muted-foreground mt-1 opacity-70" data-testid="text-balance-usd">
             ≈ {formatUSD(WEBD2toUSD(totalBalance + stakedNum))} USD
