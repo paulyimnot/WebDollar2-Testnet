@@ -431,10 +431,22 @@ export default function Admin() {
 
         {!waitlistLoading && waitlistEntries && waitlistEntries.length > 0 && (
           <>
-            <div className="mb-4 p-3 bg-card border border-primary/10 rounded-md font-mono text-sm flex items-center gap-3">
-              <Users className="w-5 h-5 text-accent" />
-              <span className="text-muted-foreground">Total signups:</span>
-              <span className="text-accent text-lg font-bold" data-testid="text-waitlist-total">{waitlistEntries.length}</span>
+            <div className="mb-4 flex flex-col md:flex-row gap-4">
+              <div className="flex-1 p-3 bg-card border border-primary/10 rounded-md font-mono text-sm flex items-center gap-3">
+                <Users className="w-5 h-5 text-accent" />
+                <span className="text-muted-foreground">Total signups:</span>
+                <span className="text-accent text-lg font-bold" data-testid="text-waitlist-total">{waitlistEntries.length}</span>
+              </div>
+              <div className="flex-[2] p-3 bg-accent/5 border border-accent/20 rounded-md font-mono text-xs flex items-start gap-3">
+                <Mail className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="text-accent font-black uppercase tracking-widest">LAUNCH REWARD PROTOCOL</div>
+                  <p className="text-muted-foreground opacity-90 leading-relaxed">
+                    The first 1,000 users on this list are guaranteed <span className="text-accent font-bold">1,000 WEBD2</span> on mainnet launch. 
+                    Official claim instructions must be manually dispatched to their registered email addresses.
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full font-mono text-sm text-left">

@@ -65,6 +65,7 @@ export interface IStorage {
   getCardWaitlistEntry(userId: number): Promise<CardWaitlistEntry | undefined>;
   getCardWaitlistCount(): Promise<number>;
   getAllCardWaitlistEntries(): Promise<any[]>;
+  getCardWaitlistEntryByEmail(email: string): Promise<CardWaitlistEntry | undefined>;
   getUserRewardStats(userId: number): Promise<{ totalRewardsEarned: string; rewardsCount: number; lastRewardAmount: string }>;
 
 }
@@ -448,6 +449,10 @@ export class DatabaseStorage implements IStorage {
       .orderBy(cardWaitlist.id);
     return entries;
   }
+   async getCardWaitlistEntryByEmail(email: string): Promise<CardWaitlistEntry | undefined> {
+     const [entry] = await db.select().from(cardWaitlist).where(eq(cardWaitlist.email, email));
+     return entry;
+   }
 
   async getUserRewardStats(userId: number): Promise<{ totalRewardsEarned: string; rewardsCount: number; lastRewardAmount: string }> {
     const [stats] = await db.select({

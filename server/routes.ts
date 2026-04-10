@@ -2104,21 +2104,31 @@ export async function registerRoutes(
   });
 
   app.post("/api/card/waitlist/join", async (req, res) => {
-    // @ts-ignore
-    if (!req.session.userId) return res.status(401).json({ message: "Please log in first" });
     const { email } = req.body;
     if (!email || typeof email !== "string" || !email.includes("@")) {
       return res.status(400).json({ message: "Please enter a valid email address" });
     }
     try {
       // @ts-ignore
-      const userId = req.session.userId;
-      const existing = await storage.getCardWaitlistEntry(userId);
-      if (existing) {
-        return res.status(400).json({ message: "You're already on the waitlist" });
+      const userId = req.session.userId || null;
+      
+      const trimmedEmail = email.trim();
+      
+      // 1. Check if email already exists anywhere in the waitlist
+      const existingEmail = await storage.getCardWaitlistEntryByEmail(trimmedEmail);
+      if (existingEmail) {
+         return res.status(400).json({ message: "This email is already on our waitlist!" });
       }
-      // @ts-ignore
-      const entry = await storage.joinCardWaitlist({ userId: req.session.userId, email: email.trim() });
+
+      // 2. If logged in, check if user already joined with a different email
+      if (userId) {
+        const existingUser = await storage.getCardWaitlistEntry(userId);
+        if (existingUser) {
+           return res.status(400).json({ message: "You have already joined the waitlist with another email." });
+        }
+      }
+
+      const entry = await storage.joinCardWaitlist({ userId, email: trimmedEmail });
       const totalCount = await storage.getCardWaitlistCount();
       res.json({ success: true, position: entry.id, totalCount });
     } catch (err: any) {

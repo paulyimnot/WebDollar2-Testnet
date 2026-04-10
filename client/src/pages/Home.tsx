@@ -1,11 +1,15 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { ArrowRight, Coins, Globe, Lock, ShieldCheck, Zap, CreditCard, Link2, Users, Blocks, ArrowRightLeft, Activity } from "lucide-react";
+import { ArrowRight, Coins, Globe, Lock, ShieldCheck, Zap, CreditCard, Link2, Users, Blocks, ArrowRightLeft, Activity, Mail, Loader2, CheckCircle } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CyberCard } from "@/components/CyberCard";
 import { PriceTicker } from "@/components/PriceTicker";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import logoImg from "@assets/1771108919092_1771109065229.jpg";
 
@@ -44,6 +48,28 @@ export default function Home() {
     refetchInterval: 30000,
   });
 
+  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+
+  const { data: waitlistStatus } = useQuery<{ joined: boolean; email?: string; position: number | null; totalCount: number }>({
+    queryKey: ["/api/card/waitlist/status"],
+  });
+
+  const joinMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await apiRequest("POST", "/api/card/waitlist/join", { email });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/card/waitlist/status"] });
+      toast({ title: "You're on the list!", description: "1,000 WEBD2 reward locked for launch day. We'll email you instructions!" });
+      setEmail("");
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to join waitlist", variant: "destructive" });
+    },
+  });
+
   return (
     <div className="flex flex-col min-h-screen">
 
@@ -67,13 +93,67 @@ export default function Home() {
               <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">DOLLAR</span>
               <span className="text-primary text-4xl sm:text-5xl md:text-5xl ml-2">2</span>
             </h1>
-            <p className="text-lg sm:text-xl md:text-2xl font-mono text-primary/90 mb-12 max-w-4xl mx-auto px-6 font-bold" data-testid="text-tagline">
-              CURRENCY OF THE INTERNET <br/>
-              <span className="text-base sm:text-lg md:text-lg text-muted-foreground block mt-8 leading-relaxed font-normal opacity-80">
+            <p className="text-lg sm:text-xl md:text-2xl font-mono text-primary/90 mb-6 max-w-4xl mx-auto px-6 font-bold uppercase tracking-tighter" data-testid="text-tagline">
+              CURRENCY OF THE INTERNET
+            </p>
+
+            {/* EARLY ACCESS CARD PROMO */}
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mb-12 w-full max-w-2xl mx-auto group"
+            >
+              <div className="relative p-[2px] rounded-xl bg-gradient-to-r from-accent via-yellow-400 to-accent animate-gradient shadow-[0_0_30px_rgba(255,193,44,0.2)]">
+                <div className="bg-background/95 backdrop-blur-xl rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CreditCard className="w-6 h-6 text-accent animate-pulse" />
+                      <span className="text-xs font-heading text-accent font-black tracking-widest uppercase">EARLY ACCESS CARD</span>
+                    </div>
+                    <h3 className="text-2xl font-black text-white italic tracking-tighter mb-1">BE ONE OF THE FIRST 1,000</h3>
+                    <p className="text-sm font-mono text-primary/70">Receive <span className="text-accent font-bold">1,000 WEBD2</span> on Mainnet Launch day. Instructions will be emailed to you.</p>
+                  </div>
+                  
+                  <div className="flex-1 w-full max-w-sm">
+                    {waitlistStatus?.joined ? (
+                      <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 px-6 py-4 rounded-lg w-full">
+                        <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+                        <div className="flex flex-col">
+                           <span className="text-[10px] font-heading text-green-400 uppercase tracking-widest font-black">REWARD SECURED</span>
+                           <span className="text-xs font-mono text-white/70">Waitlist Position: #{waitlistStatus.position?.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="relative flex-1">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Email address..."
+                            className="h-14 pl-10 bg-black/40 border-primary/20 font-mono text-sm focus:border-accent/50"
+                          />
+                        </div>
+                        <Button 
+                          onClick={() => joinMutation.mutate(email)}
+                          disabled={joinMutation.isPending || !email.includes("@")}
+                          className="h-14 btn-gold px-6 font-black uppercase tracking-widest text-[10px] shrink-0"
+                        >
+                          {joinMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "SECURE REWARD"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <p className="text-sm sm:text-lg md:text-lg text-muted-foreground mb-12 max-w-4xl mx-auto px-6 font-normal opacity-80 leading-relaxed">
                 First-of-its-kind, browser-native blockchain utilizing the high-throughput DIELBS consensus engine. 
                 Secured by ed25519/secp256k1 signatures with 5-second deterministic finality and native WebAssembly validation. 
                 Mass adoption through absolute decentralization and zero-installation infrastructure.
-              </span>
             </p>
 
             <div className="flex flex-col items-center gap-4 mt-8">

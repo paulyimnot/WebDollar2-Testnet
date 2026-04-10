@@ -136,8 +136,9 @@ export const insertWalletAddressSchema = createInsertSchema(walletAddresses).omi
 
 export const cardWaitlist = pgTable("card_waitlist", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").references(() => users.id),
   email: text("email").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertCardWaitlistSchema = createInsertSchema(cardWaitlist).omit({
