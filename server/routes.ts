@@ -2474,10 +2474,6 @@ If you don't know something, say so honestly. Do not make up information. Keep a
               const userShare = userStake / totalNetworkStaked;
               const userReward = rewardAmount * userShare;
 
-              if (isNaN(userReward)) {
-                console.error(`[DIELBS BUG] NaN REWARD DETECTED: user=${user.username}, stake=${userStake}, total=${totalNetworkStaked}, amount=${rewardAmount}`);
-              }
-
               if (!isNaN(userReward) && userReward > 0.0001) {
                 const currentBalance = parseFloat(user.balance || "0");
                 const newBalance = ( (isNaN(currentBalance) ? 0 : currentBalance) + userReward).toFixed(4);
