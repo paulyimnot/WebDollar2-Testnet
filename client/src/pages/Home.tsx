@@ -10,8 +10,8 @@ import { formatDistanceToNow } from "date-fns";
 import logoImg from "@assets/1771108919092_1771109065229.jpg";
 
 const TOKENOMICS_DATA = [
-  { name: 'V1 Migration Reserve', value: 43.2, color: '#FFD54F' },
-  { name: 'Public Mining & Staking', value: 14.6, color: '#FFC107' },
+  { name: 'V1 Migration Reserve', value: 14.6, color: '#FFD54F' },
+  { name: 'Public Mining & Staking', value: 43.2, color: '#FFC107' },
   { name: 'Developer Funds', value: 6.8, color: '#FFA000' },
   { name: 'Foundation Fund', value: 3.4, color: '#D4AF37' },
 ];
@@ -169,12 +169,12 @@ export default function Home() {
                   <span className="text-accent font-bold">68,000,000,000 WEBD2</span>
                 </div>
                 <div className="flex justify-between flex-wrap gap-1 border-b border-primary/20 py-2">
-                  <span>V1 MIGRATION RESERVE (48B V1 MINUS 10% DEV)</span>
-                  <span className="text-primary font-bold">43,200,000,000 WEBD2</span>
+                  <span>V1 MIGRATION RESERVE</span>
+                  <span className="text-primary font-bold">14,600,000,000 WEBD2</span>
                 </div>
                 <div className="flex justify-between flex-wrap gap-1 border-b border-primary/20 py-2">
                   <span>PUBLIC MINING CACHE</span>
-                  <span className="text-accent">14,600,000,000 WEBD2</span>
+                  <span className="text-accent font-bold">43,200,000,000 WEBD2</span>
                 </div>
                 <div className="flex justify-between flex-wrap gap-1 border-b border-primary/20 py-2">
                   <span>DEVELOPER RESERVE (10%)</span>

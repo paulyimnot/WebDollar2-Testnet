@@ -143,7 +143,7 @@ export default function Blackpaper() {
                 When you click "Send," your web browser mathematically locks the
                 money using your secret combination. By the time it leaves your
                 phone, nobody can intercept it or steal it. And the best part?
-                It's completely <strong>free</strong> to send. No fees. No
+                It's incredibly fast and efficient to send. No
                 middlemen. No banks.
               </p>
             </section>
