@@ -55,6 +55,25 @@ export default function Whitepaper() {
               </p>
             </section>
 
+            {/* HERITAGE & INDEPENDENCE */}
+            <section className="mb-16 p-8 bg-primary/5 border border-primary/20 rounded-xl relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full border-b border-l border-primary/20"></div>
+               <h2 className="text-2xl text-accent font-black mb-6 uppercase tracking-tighter flex items-center">
+                 <Globe className="w-6 h-6 mr-3 text-accent" /> Heritage & Independence
+               </h2>
+               <div className="space-y-4 text-white/80 leading-relaxed text-sm">
+                 <p>
+                   WebDollar 2 is built to honor the groundbreaking vision of the original WebDollar project—pioneering the concept of an <strong>entirely browser-native</strong> financial infrastructure. We remain deeply inspired by the commitment to absolute accessibility and the elimination of installation barriers.
+                 </p>
+                 <div className="p-4 bg-background/50 border-l-4 border-accent rounded-r-md italic">
+                   "We are a totally separate entity, utilizing a proprietary architecture and a new independent blockchain. WebDollar 2 is not connected to, endorsed by, or affiliated with webdollar.io or its original founding team."
+                 </div>
+                 <p>
+                   Our participants are original, and our consensus layer (DIELBS) is a unique technological departure from the original implementation. However, as an act of solidarity and respect for the WebDollar community, <strong>we are honoring a 1:1 migration path</strong> for all legitimate V1 holders upon our Mainnet launch.
+                 </p>
+               </div>
+            </section>
+
             {/* 2. TOPOGRAPHIC ROUTING */}
             <section className="mb-16">
               <h2 className="text-2xl text-accent font-bold mb-6 flex items-center border-l-4 border-accent pl-4 uppercase">
@@ -146,25 +165,52 @@ export default function Whitepaper() {
 
             {/* 5. MALICIOUS NODE HANDING */}
             <section className="mb-16">
-              <h2 className="text-2xl text-accent font-bold mb-6 flex items-center border-l-4 border-accent pl-4 uppercase">
-                4. Threat Mitigation: Malicious Nodes
+              <h2 className="text-2xl text-accent font-bold mb-6 flex items-center border-l-4 border-accent pl-4 uppercase font-black">
+                4. Security Architecture: Defensive Neutralization
               </h2>
-              <p className="text-muted-foreground leading-relaxed mb-6">
-                WebDollar 2 is built with a <strong>Deterministically Hostile</strong> mindset. The protocol assumes every node could be malicious.
+              <p className="text-muted-foreground leading-relaxed mb-8">
+                WebDollar 2 is engineered with a <strong className="text-white">Deterministically Hostile</strong> security posture. 
+                Rather than relying on social trust or proof-of-stake alone, the protocol assumes every connected peer is potentially malicious. 
+                The P2P mesh uses a three-tier defensive strategy to neutralize adversarial behavior without degrading network throughput.
               </p>
-              <div className="space-y-4">
-                <div className="flex gap-4 items-start">
-                  <div className="bg-red-500/10 p-2 rounded border border-red-500/20 text-red-400 font-black text-xs">REJECT</div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    <strong>Cryptographic Assertion:</strong> Every block and transaction must be signed. If a malicious node tries to inject a fake transaction, 
-                    the EdDSA math instantly fails. Adjacent peers detect the signature mismatch and drop the payload before it ever reaches the DIELBS engine.
+              
+              <div className="space-y-8">
+                <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-xl">
+                  <h3 className="text-lg text-white font-bold mb-4 flex items-center uppercase tracking-widest">
+                    <Shield className="w-5 h-5 mr-3 text-red-500" /> Layer 1: Cryptographic Assertion
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    The network's primary defense is the mathematical impossibility of forging a valid signature. 
+                    Every state mutation MUST be signed via <strong>ed25519</strong>. 
+                    When a malicious node attempts to inject an unauthorized transaction or modify a block's metadata, 
+                    the cryptographic hash mismatch is identified in microseconds by adjacent browser nodes using local WASM verification. 
+                    The invalid payload is <strong>Instant-Dropped</strong> at the edge, meaning bad data never even touches the DIELBS consensus buffer.
                   </p>
                 </div>
-                <div className="flex gap-4 items-start">
-                  <div className="bg-red-500/10 p-2 rounded border border-red-500/20 text-red-400 font-black text-xs">ISOLATE</div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    <strong>Peer Quarantining:</strong> Nodes that repeatedly broadcast invalid data are automatically blacklisted by the P2P mesh. 
-                    The network topologically "routes around" the problem, isolating the malicious node until it has zero peer connections, effectively cutting it off from the global ledger.
+
+                <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-xl">
+                  <h3 className="text-lg text-white font-bold mb-4 flex items-center uppercase tracking-widest">
+                    <Network className="w-5 h-5 mr-3 text-red-500" /> Layer 2: Peer Quarantining & Reputation
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Browser-nodes maintain a persistent <strong>Peer Trust Matrix</strong>. 
+                    Nodes that broadcast invalid blocks or double-spend signatures incur a severe reputation penalty. 
+                    Once a peer's trust score crosses a deterministic "Isolation Threshold," the network's DHT (Distributed Hash Table) 
+                    effectively delists the node. Direct WebRTC connections are terminated, and the malicious participant is 
+                    topologically isolated, effectively screaming into a void with zero peer connectivity.
+                  </p>
+                </div>
+
+                <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-xl">
+                  <h3 className="text-lg text-white font-bold mb-4 flex items-center uppercase tracking-widest">
+                    <Activity className="w-5 h-5 mr-3 text-red-500" /> Layer 3: Consensus Fork-Pruning
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Even if a coordinated Sybil attack manages to spoof a temporary chain segment, 
+                    the <strong>DIELBS Engine</strong> executes a 5-second <em>Epoch Cleanup</em>. 
+                    Because the DIELBS coordinator validates the global pool of incoming signatures against its own internal state, 
+                    any "ghost chains" or invalid forks are identified and pruned during block serialization. 
+                    The network reverts to the last mathematically perfect state with zero downtime, rendering the attack expensive and futile.
                   </p>
                 </div>
               </div>
