@@ -1073,9 +1073,9 @@ export async function registerRoutes(
   // === Proof-of-Stake Staking Routes ===
 
   // === Proof-of-Stake Staking Routes (100-Year Halving Model) ===
-  const TOTAL_MINING_SUPPLY = 57800000000; // 85% of 68B
+  const TOTAL_MINING_SUPPLY = 43600000000; // Total to be mined over 100 years
   const BLOCKS_PER_ERA = 18934560; // Exactly 3 years at 5s blocks
-  const INITIAL_ERA_REWARD = 1526.32; // Starting reward to reach 57.8B through halvings
+  const INITIAL_ERA_REWARD = 1151.32; // Starting reward to reach 43.6B through halvings
   const REWARD_INTERVAL_SECONDS = 5;
   const MIN_STAKE_AMOUNT = 1000;
 
@@ -1920,8 +1920,8 @@ export async function registerRoutes(
       await createGenesisUser("dev_funds_wallet", "6800000000", true, false);
       // 5% Foundation = 3,400,000,000
       await createGenesisUser("foundation_wallet", "3400000000", false, true);
-      // Migration = 48B (V1 Supply) - 4.8B (Old Dev 10%) = 43.2B
-      await createGenesisUser("migration_wallet", "43200000000", false, false);
+      // Migration = Reserve for V1 holders (Burned V1 supply minus dev/foundation blocks)
+      await createGenesisUser("migration_wallet", "14200000000", false, false);
       
       res.json({ success: true, message: "Genesis complete: Dev, Foundation, and Migration wallets instantiated successfully." });
     } catch(err) {

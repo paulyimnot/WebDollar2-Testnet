@@ -205,7 +205,7 @@ export default function Admin() {
               <span className="text-[10px] font-bold">REVEAL</span>
             </Button>
           </div>
-          <div className="text-xl text-white">43,200,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
+          <div className="text-xl text-white">14,200,000,000 <span className="text-[10px] text-muted-foreground">WEBD2</span></div>
           <div className="text-[9px] text-accent mt-2 break-all font-bold">ADDRESS: {treasury?.migration?.address || "FETCHING..."}</div>
           {showSeeds.migration && (
             <div className="mt-2 p-3 bg-accent/20 border border-accent/40 rounded text-[10px] text-white font-bold animate-in fade-in slide-in-from-top-1 shadow-[0_0_15px_rgba(255,193,44,0.2)]">
