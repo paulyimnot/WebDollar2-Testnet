@@ -35,9 +35,26 @@ export default function Wallet() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [isResolvingAlias, setIsResolvingAlias] = useState(false);
 
-  // Custom Alias state
   const [customAlias, setCustomAlias] = useState("");
   const [isSavingAlias, setIsSavingAlias] = useState(false);
+  const [networkLatency, setNetworkLatency] = useState<number | null>(null);
+
+  // Measure Latency
+  useEffect(() => {
+    const measureLatency = async () => {
+        const start = performance.now();
+        try {
+            await fetch("/api/blockchain/status");
+            const end = performance.now();
+            setNetworkLatency(Math.round(end - start));
+        } catch {
+            setNetworkLatency(null);
+        }
+    };
+    measureLatency();
+    const interval = setInterval(measureLatency, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const saveAlias = async () => {
     if (!customAlias.trim()) return;
@@ -256,10 +273,24 @@ export default function Wallet() {
           )}
 
           {blockchainStatus?.connected && (
-            <div className="flex items-center gap-2 mt-3 lg:justify-end" data-testid="text-blockchain-status">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-xs font-mono text-green-400/80">{blockchainStatus.network}</span>
-              <span className="text-xs font-mono text-muted-foreground">Block #{blockchainStatus.blockNumber?.toLocaleString()}</span>
+            <div className="flex flex-col items-start lg:items-end gap-2 mt-4" data-testid="text-blockchain-status">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-[10px] font-mono font-black text-green-400 tracking-widest uppercase">{blockchainStatus.network}</span>
+                <span className="text-[10px] font-mono text-muted-foreground bg-white/5 px-2 py-0.5 rounded border border-white/10 italic">Block #{blockchainStatus.blockNumber?.toLocaleString()}</span>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                 <div className="flex items-center gap-1.5 bg-accent/10 border border-accent/30 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(255,193,44,0.1)]">
+                    <Zap className="w-3 h-3 text-accent fill-accent/20" />
+                    <span className="text-[10px] font-mono font-black text-white leading-none">TX SPEED: <span className="text-accent underline">~4.8s</span></span>
+                 </div>
+                 
+                 <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/30 px-2 py-0.5 rounded group hover:border-primary transition-colors cursor-help">
+                    <div className={`w-1.5 h-1.5 rounded-full ${blockchainStatus.txLatency && blockchainStatus.txLatency < 200 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <span className="text-[10px] font-mono font-black text-white leading-none uppercase">TX LATENCY: <span className="text-primary">{blockchainStatus.txLatency ? `${blockchainStatus.txLatency}ms` : "---"}</span></span>
+                 </div>
+              </div>
             </div>
           )}
           <div className="mt-3 w-full lg:w-auto">

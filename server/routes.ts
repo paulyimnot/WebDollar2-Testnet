@@ -23,6 +23,7 @@ import { getConnectedPeersCount } from "./signaling.js";
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const faucetIpStamps = new Map<string, number>();
 export let isBlockchainPaused = false;
+let lastTxLatency = 142; // ms, default baseline
 
 function rateLimit(key: string, maxAttempts: number, windowMs: number): boolean {
   const now = Date.now();
@@ -847,6 +848,7 @@ export async function registerRoutes(
     const senderAddrId = senderWallet ? senderWallet.id : null;
 
     try {
+      const startTime = performance.now();
       const tx = await storage.executeTransfer(
         sender.id,
         recipient.id,
@@ -856,6 +858,7 @@ export async function registerRoutes(
         sender.walletAddress!,
         recipientAddress.trim()
       );
+      lastTxLatency = Math.round(performance.now() - startTime);
 
       res.json(tx);
     } catch (err: any) {
@@ -932,6 +935,7 @@ export async function registerRoutes(
     const senderAddrId = senderWalletAddr ? senderWalletAddr.id : null;
 
     try {
+      const startTime = performance.now();
       const tx = await storage.executeTransfer(
         sender.id,
         recipient.id,
@@ -941,6 +945,7 @@ export async function registerRoutes(
         "***PRIVATE_SENDER***",
         "***PROTECTED_RECIPIENT***"
       );
+      lastTxLatency = Math.round(performance.now() - startTime);
 
       // Mark as private — addresses are masked in the response
       res.json({
@@ -1981,7 +1986,8 @@ export async function registerRoutes(
         ...status, 
         network: "WEBD2 Testnet", 
         tokenContract: tokenAddress,
-        blockNumber: latestBlock?.id || 1
+        blockNumber: latestBlock?.id || 1,
+        txLatency: lastTxLatency 
       });
     } catch (err: any) {
       res.json({ connected: false, network: "Unknown", chainId: null, blockNumber: null, tokenContract: null });
