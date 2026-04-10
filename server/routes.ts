@@ -1102,6 +1102,10 @@ export async function registerRoutes(
     
     const now = Date.now();
     const lastClaim = lastClaimTime ? new Date(lastClaimTime).getTime() : now;
+    
+    // Safety check for invalid dates
+    if (isNaN(lastClaim)) return 0;
+    
     const elapsedSeconds = Math.max(0, (now - lastClaim) / 1000);
     
     // Liveness Threshold: Rewards only accrue during active socket/tab presence (30s window)
@@ -2452,24 +2456,32 @@ If you don't know something, say so honestly. Do not make up information. Keep a
         );
 
         if (activeStakers.length > 0) {
-          const totalNetworkStaked = activeStakers.reduce((sum, u) => sum + parseFloat(u.stakedBalance || "0"), 0);
+          const totalNetworkStaked = activeStakers.reduce((sum, u) => {
+            const val = parseFloat(u.stakedBalance || "0");
+            return sum + (isNaN(val) ? 0 : val);
+          }, 0);
           
-          for (const user of activeStakers) {
-            const userStake = parseFloat(user.stakedBalance || "0");
-            const userShare = userStake / totalNetworkStaked;
-            const userReward = rewardAmount * userShare;
+          if (totalNetworkStaked > 0 && !isNaN(rewardAmount)) {
+            for (const user of activeStakers) {
+              const userStake = parseFloat(user.stakedBalance || "0");
+              if (isNaN(userStake) || userStake <= 0) continue;
 
-            if (userReward > 0.0001) {
-              const newBalance = (parseFloat(user.balance || "0") + userReward).toFixed(4);
-              await storage.updateUser(user.id, { balance: newBalance });
-              
-              // Log the reward transaction
-              await db.insert(transactions).values({
-                receiverId: user.id,
-                amount: userReward.toFixed(4),
-                type: "staking_reward",
-                timestamp: new Date()
-              });
+              const userShare = userStake / totalNetworkStaked;
+              const userReward = rewardAmount * userShare;
+
+              if (!isNaN(userReward) && userReward > 0.0001) {
+                const currentBalance = parseFloat(user.balance || "0");
+                const newBalance = ( (isNaN(currentBalance) ? 0 : currentBalance) + userReward).toFixed(4);
+                await storage.updateUser(user.id, { balance: newBalance });
+                
+                // Log the reward transaction
+                await db.insert(transactions).values({
+                  receiverId: user.id,
+                  amount: userReward.toFixed(4),
+                  type: "staking_reward",
+                  timestamp: new Date()
+                });
+              }
             }
           }
         }
