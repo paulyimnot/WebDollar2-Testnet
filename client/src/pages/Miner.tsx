@@ -424,7 +424,7 @@ export default function Miner() {
           </div>
           <div className="flex gap-2 text-green-400">
             <span className="text-accent/50">[{new Date().toLocaleTimeString()}]</span>
-            <span>LAST REWARD PROCESSED: {stakingInfo?.lastRewardAmount} WEBD2</span>
+            <span>LAST REWARD PROCESSED: {isNaN(parseFloat(stakingInfo?.lastRewardAmount || "0")) ? "0" : stakingInfo?.lastRewardAmount} WEBD2</span>
           </div>
           <div className="mt-2 pt-2 border-t border-primary/5 text-[9px] text-muted-foreground uppercase tracking-widest leading-relaxed">
             Note: As a browser-native proof-of-stake protocol, WebDollar 2 requires this tab to remain active. Rewards are calculated based on your contribution to network decentralization.
@@ -489,7 +489,7 @@ export default function Miner() {
                     </td>
                     <td className={`py-3 px-2 text-right font-bold ${isSender && !isReward && !isPurchase ? 'text-red-400' : 'text-accent'}`}>
                       {isSender && !isReward && !isPurchase ? '-' : '+'}
-                      {Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 4 })} WEBD2
+                      {(isNaN(Number(tx.amount)) ? 0 : Number(tx.amount)).toLocaleString(undefined, { minimumFractionDigits: 4 })} WEBD2
                     </td>
                     <td className="py-3 px-2 text-right text-muted-foreground text-xs hidden sm:table-cell">
                       {tx.timestamp ? formatDistanceToNow(new Date(tx.timestamp), { addSuffix: true }) : ''}
