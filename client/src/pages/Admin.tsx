@@ -191,9 +191,7 @@ export default function Admin() {
         <p className="font-mono text-muted-foreground">
           Review and manage legacy token conversion requests and monitor network treasury reserves.
         </p>
-        <div className="mt-2 text-[10px] bg-red-500/20 text-red-500 inline-block px-2 py-1 rounded font-bold border border-red-500/30">
-          ADMIN CONSOLE V2.0.1 - REVEAL BUTTONS ENABLED
-        </div>
+
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
