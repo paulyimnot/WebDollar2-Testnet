@@ -205,7 +205,7 @@ export default function Auth() {
                   ⚠️ Reminder: Login is case-sensitive, of course.
                 </p>
                 <div className="flex justify-center mt-6">
-                  <Button type="submit" disabled={isLoggingIn} className="w-auto px-10 btn-neon-filled py-6 text-sm font-bold tracking-widest" data-testid="button-login-submit">
+                  <Button type="submit" disabled={isLoggingIn} className="w-1/2 btn-neon-filled py-6 text-sm font-bold tracking-widest" data-testid="button-login-submit">
                     {isLoggingIn ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     AUTHENTICATE
                   </Button>
