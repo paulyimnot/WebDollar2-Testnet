@@ -10,7 +10,7 @@ import { generateWallet, encryptPrivateKey, deriveKeyPair, verifySignature } fro
 import { createHash } from "crypto";
 import { checkConnection, getContractAddress, getOnChainBalance, getMaticBalance, getPolygonscanBaseUrl, getRecentBlocks, getRecentTransactionsFromBlock } from "./blockchain.js";
 import { db } from "./db.js";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, and, gt, or } from "drizzle-orm";
 import { users, transactions, walletAddresses, blockedWallets, blocks } from "../shared/schema.js";
 import * as OTPAuth from "otpauth";
 import QRCode from "qrcode";
@@ -2473,6 +2473,10 @@ If you don't know something, say so honestly. Do not make up information. Keep a
 
               const userShare = userStake / totalNetworkStaked;
               const userReward = rewardAmount * userShare;
+
+              if (isNaN(userReward)) {
+                console.error(`[DIELBS BUG] NaN REWARD DETECTED: user=${user.username}, stake=${userStake}, total=${totalNetworkStaked}, amount=${rewardAmount}`);
+              }
 
               if (!isNaN(userReward) && userReward > 0.0001) {
                 const currentBalance = parseFloat(user.balance || "0");

@@ -14,6 +14,7 @@ export interface IStorage {
   getUserByAlias(alias: string): Promise<User | undefined>;
   createUser(user: any): Promise<User>;
   updateUserBalance(userId: number, newBalance: string): Promise<User>;
+  updateUser(userId: number, data: Partial<User>): Promise<User>;
   updateUserAlias(userId: number, alias: string | null, isAliasActive: boolean): Promise<User>;
 
   createWalletAddress(data: any): Promise<WalletAddress>;
@@ -116,6 +117,14 @@ export class DatabaseStorage implements IStorage {
   async updateUserBalance(userId: number, newBalance: string): Promise<User> {
     const [user] = await db.update(users)
       .set({ balance: newBalance })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async updateUser(userId: number, data: Partial<User>): Promise<User> {
+    const [user] = await db.update(users)
+      .set(data)
       .where(eq(users.id, userId))
       .returning();
     return user;
