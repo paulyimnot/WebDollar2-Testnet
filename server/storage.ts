@@ -468,9 +468,9 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     return {
-      totalRewardsEarned: stats?.total || "0.0000",
+      totalRewardsEarned: isNaN(parseFloat(stats?.total || "0")) ? "0.0000" : (stats?.total || "0.0000"),
       rewardsCount: Number(stats?.count || 0),
-      lastRewardAmount: lastTx?.amount || "0.0000"
+      lastRewardAmount: isNaN(parseFloat(lastTx?.amount || "0")) ? "0.0000" : (lastTx?.amount || "0.0000")
     };
   }
 
