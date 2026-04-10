@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { ArrowLeft, Cpu, Activity, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Cpu, Activity, Zap, FileText, Shield, Network, Lock, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Whitepaper() {
@@ -33,295 +33,211 @@ export default function Whitepaper() {
             <p className="font-mono text-primary font-bold uppercase text-lg tracking-[0.2em] bg-primary/5 py-2 rounded-md">
               A Scalably Inverted, Browser-Native Protocol
             </p>
+            <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest opacity-60">
+              Protocol Version: 2.0.4-DIELBS | Technical Specification
+            </div>
           </div>
 
           <div className="prose prose-invert prose-yellow max-w-none font-mono">
+            {/* 1. ABSTRACT */}
             <section className="mb-16">
-              <h2 className="text-3xl text-accent font-black mb-6 flex items-center border-l-8 border-accent pl-6 bg-accent/5 py-3 rounded-r-md">
+              <h2 className="text-3xl text-accent font-black mb-6 flex items-center border-l-8 border-accent pl-6 bg-accent/5 py-3 rounded-r-md uppercase tracking-tighter">
                 Abstract
               </h2>
-              <p className="text-white/90 text-xl leading-relaxed font-medium">
-                Contemporary blockchain architectures suffer from an intrinsic
-                topological bottleneck: as network participation increases, the
-                necessity for robust hardware verification induces high latency,
-                mempool congestion, and prohibitive gas fees.{" "}
-                <strong>
-                  WEBD2ollar 2 (WEBD2) structurally inverses this scalability
-                  trilemma.
-                </strong>{" "}
-                By deploying a purely browser-native routing execution mesh
-                built on WebRTC and WebSockets (WASM/TypeScript), WEBD2
-                operationalizes every end-user as a zero-trust consensus
-                participant. This paper models WEBD2's unique dual-verification
-                mechanism and its dependency on the high-velocity, proprietary{" "}
-                <strong className="text-white">DIELBS Engine</strong>,
-                illustrating how the network mathematically benefits from
-                adoption scaling rather than degrading under load.
+              <p className="text-white/90 text-lg leading-relaxed font-medium">
+                The WEBD2ollar 2 (WEBD2) protocol introduces a structural inversion of traditional Layer-1 blockchain architectures. 
+                Legacy networks rely on heavy, hardware-dependent verification which creates inevitable latency and fee-incentivized congestion. 
+                WEBD2 replaces this bottleneck with a <strong>Browser-Native P2P Mesh</strong>. 
+                By utilizing <strong>WebRTC</strong> for direct peer-to-peer signaling and <strong>WebAssembly (WASM)</strong> for near-native execution of cryptographic tasks, 
+                WEBD2 operationalizes every end-user's device as a zero-trust consensus participant. 
+                This paper explores the mechanics of <strong>Inverse Scalability</strong>, the proprietary logic of the <strong>DIELBS Execution Engine</strong>, 
+                and the protocol-level solutions for security, double-spending, and financial privacy.
               </p>
             </section>
 
-            <section className="mb-12">
-              <h2 className="text-2xl text-accent font-bold mb-4 flex items-center border-l-4 border-accent pl-4">
-                1. Topographic Routing & Inverse Scalability
-              </h2>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                Traditional Layer-1 protocols inherently disconnect end-users
-                from the consensus mechanism, relegating them to "light clients"
-                reliant on centralized RPC nodes. WEBD2 forces a return to true
-                peer-to-peer (P2P) mechanics.
-              </p>
-              <ul className="space-y-4 mt-6">
-                <li className="bg-card/50 p-4 border border-primary/10 rounded-md">
-                  <strong className="text-white block mb-2">
-                    <Activity className="inline w-5 h-5 mr-2 text-primary" />
-                    Zero-Trust Routing Nodes
-                  </strong>
-                  The WEBD2 architecture converts the standard web browser into a
-                  primary network stratum. These nodes operate entirely as
-                  high-speed signaling pathways. They are not burdened with
-                  storing complete historical ledger arrays.
-                </li>
-                <li className="bg-card/50 p-4 border border-primary/10 rounded-md">
-                  <strong className="text-white block mb-2">
-                    <Activity className="inline w-5 h-5 mr-2 text-primary" />
-                    Inverse Bandwidth Scaling
-                  </strong>
-                  Because browsers rely entirely on localized signature
-                  generation (client-side processing) and P2P broadcasting, the
-                  available network bandwidth scales symmetrically with the user
-                  base. WEBD2 becomes mathematically more resilient and rapid as
-                  adoption surges.
-                </li>
-              </ul>
-            </section>
-
-            <section className="mb-12">
-              <h2 className="text-2xl text-accent font-bold mb-4 flex items-center border-l-4 border-accent pl-4">
-                2. Decoupled Dual-Verification Consensus
+            {/* 2. TOPOGRAPHIC ROUTING */}
+            <section className="mb-16">
+              <h2 className="text-2xl text-accent font-bold mb-6 flex items-center border-l-4 border-accent pl-4 uppercase">
+                1. The Browser-Native P2P Mesh
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-6">
-                To maintain zero-trust security while optimizing for node
-                brevity, WEBD2 separates cryptographic verification into a
-                two-phase decoupled algorithm.
+                Unlike traditional blockchains where users connect to centralized RPC nodes, every WEBD2 interface is a native network participant. 
+                As soon as a user opens the dashboard, they initialize a <strong>Topographic Routing Node</strong> within their local environment.
               </p>
-
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl text-white font-bold mb-2">
-                    Phase 1: Client-Side Cryptographic Assertion (The Routing
-                    Tier)
+              
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-card/50 p-6 border border-primary/10 rounded-xl relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover:bg-accent transition-colors"></div>
+                  <h3 className="text-white font-bold mb-3 flex items-center uppercase tracking-wider text-sm">
+                    <Globe className="w-5 h-5 mr-3 text-primary" /> WebRTC Signaling
                   </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    All execution vectors initiated in WEBD2 demand deterministic
-                    ownership authorization. Before a transaction interacts with
-                    the broader network, the local browser environment computes
-                    an <code>ed25519</code> signature (utilizing EdDSA). This
-                    step provides indisputable, locally-verified cryptographic
-                    proof of ownership, preventing the injection of invalid
-                    payloads into the mempool.
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Browser nodes establish direct UDP-like streams using WebRTC. This allows for massive, decentralized broadcast of state increments without 
+                    relying on any central server for data propagation. The network actually gets <strong>faster</strong> as more peers build new routing lanes.
                   </p>
                 </div>
-                <div>
-                  <h3 className="text-xl text-white font-bold mb-2">
-                    Phase 2: Asynchronous Block Settlement (The Consensus Tier)
+                <div className="bg-card/50 p-6 border border-primary/10 rounded-xl relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover:bg-accent transition-colors"></div>
+                  <h3 className="text-white font-bold mb-3 flex items-center uppercase tracking-wider text-sm">
+                    <Shield className="w-5 h-5 mr-3 text-primary" /> WASM Verification
                   </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Once pre-authorized payloads saturate the P2P mempool, block
-                    generators governed by the <strong>DIELBS Engine</strong>{" "}
-                    take possession of the state vectors. At a strict 5-second
-                    interval, these validator nodes mathematically reaffirm the
-                    signatures and permanently anchor the mutated state
-                    parameters into an immutable cryptographic chain.
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Cryptographic signatures (secp256k1 & ed25519) are verified locally within a sandboxed WebAssembly execution environment. 
+                    This ensures that the CPU overhead is offloaded to the edge, maintaining 100% security without slowing down the network's core.
                   </p>
                 </div>
               </div>
             </section>
 
-            <section className="mb-12">
-              <h2 className="text-2xl text-accent font-bold mb-4 flex items-center border-l-4 border-accent pl-4">
-                3. The DIELBS Engine: Sub-Millisecond Abstraction
+            {/* 3. DOUBLE SPEND PROTECTION */}
+            <section className="mb-16">
+              <h2 className="text-2xl text-accent font-bold mb-6 flex items-center border-l-4 border-accent pl-4 uppercase">
+                2. Eliminating Double-Spending
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                The secondary validation phase, historically the slowest
-                component of legacy blockchains, has been fundamentally
-                abstracted via the <strong>DIELBS Engine</strong>.
+                In a decentralized system, preventing a user from sending the same coin to two different people simultaneously is critical. 
+                WEBD2 solves this through a combination of <strong>Deterministic Timestamping</strong> and <strong>Asynchronous Batching</strong>.
               </p>
-
-              <div className="bg-primary/5 border-l-4 border-accent p-4 my-6 italic text-sm text-primary/80">
-                <strong>Note on Intellectual Property Boundaries:</strong> The
-                specific memory-threading allocations and database execution
-                methodologies utilized internally by the DIELBS Engine are
-                proprietary. The engine functions as an entirely independent
-                computational module that can operate standalone.
+              <div className="bg-primary/5 p-6 rounded-lg border border-primary/10 space-y-4">
+                <p className="text-sm text-white/80 leading-relaxed">
+                  When a transaction is broadcasted, it is tagged with a high-resolution, peer-verified timestamp. 
+                  If a user attempts to double-spend, the <strong>DIELBS Engine</strong> executes a <em>Trailing-Void Logic</em>:
+                </p>
+                <ul className="text-xs text-muted-foreground list-disc list-inside space-y-2 ml-4">
+                  <li>DIELBS maintains an ephemeral memory buffer of all uncommitted state changes.</li>
+                  <li>In the event of conflicting transactions, the engine instantly identifies the mathematical collision.</li>
+                  <li>The transaction with the confirmed earlier timestamp is anchored, while the conflicting second attempt is eradicated from the buffer before it can ever be written to the ledger.</li>
+                  <li>Because this happens in milliseconds, the "spending window" for an attacker is physically impossible to exploit.</li>
+                </ul>
               </div>
-
-              <ul className="space-y-4">
-                <li className="bg-card/50 p-4 border border-primary/10 rounded-md">
-                  <strong className="text-white block mb-2">
-                    <Zap className="inline w-5 h-5 mr-2 text-accent" />
-                    Optimistic Concurrency Control
-                  </strong>
-                  DIELBS bypasses standard relational locking. It structures
-                  transactions within temporary, localized RAM state
-                  environments, validating theoretical output states in
-                  microseconds.
-                </li>
-                <li className="bg-card/50 p-4 border border-primary/10 rounded-md">
-                  <strong className="text-white block mb-2">
-                    <Cpu className="inline w-5 h-5 mr-2 text-accent" />
-                    Asynchronous Persistence Batching
-                  </strong>
-                  Valid state transitions are committed retroactively in
-                  aggregated batches. This grants the DIELBS execution module
-                  sub-millisecond reaction times, allowing the WEBD2 protocol's
-                  UI to remain perfectly fluid while absolute cryptographic
-                  finality forms securely in the background.
-                </li>
-              </ul>
             </section>
 
-            <section className="mb-12">
-              <h2 className="text-2xl text-accent font-bold mb-4 flex items-center border-l-4 border-accent pl-4">
-                4. Anonymity and Routing Obfuscation
+            {/* 4. ALIASES & PRIVATE TRANSACTIONS */}
+            <section className="mb-16">
+              <h2 className="text-2xl text-accent font-bold mb-6 flex items-center border-l-4 border-accent pl-4 uppercase">
+                3. Privacy & Abstracted Identity
               </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                WEBD2 resolves the dichotomy between transparent generalized
-                ledgers and necessary financial privacy via an internal
-                zero-knowledge permutation toggle. Native alias resolution
-                simplifies user interaction without compromising the underlying
-                entropy. Furthermore, users can initiate obfuscated payload
-                transfers wherein the routing nodes mask origin/destination
-                integers, granting absolute privacy where required.
-              </p>
+              <div className="space-y-6">
+                <div className="p-6 bg-card/30 border border-primary/10 rounded-xl hover:border-accent/30 transition-colors">
+                  <h3 className="text-xl text-white font-bold mb-3 flex items-center">
+                    <Lock className="w-6 h-6 mr-3 text-accent" /> Secure Alias Resolution
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Aliases are managed via a <strong>One-Way Cryptographic Association</strong>. 
+                    Your username/alias is not stored directly with your wallet balance in plain text. 
+                    Instead, when someone sends funds to <code>user@webd2</code>, the network performs a secure lookup that resolves to your public address. 
+                    This keeps the ledger human-readable for users while maintaining the underlying cryptographic entropy required for security.
+                  </p>
+                </div>
+                
+                <div className="p-6 bg-card/30 border border-primary/10 rounded-xl hover:border-accent/30 transition-colors">
+                  <h3 className="text-xl text-white font-bold mb-3 flex items-center">
+                    <Activity className="w-6 h-6 mr-3 text-primary" /> Private Transactions
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Private transactions utilize a secure <strong>Payload Masking</strong> technique. 
+                    When "Private Mode" is enabled, the DIELBS Engine processes the transaction using a blinded signature pathway. 
+                    The total supply and validity are verified mathematically, but the specific sender and receiver identifiers are obfuscated 
+                    within the block hash, making it impossible for external observers to trace the flow of individual coins on the public explorer.
+                  </p>
+                </div>
+              </div>
             </section>
 
-            <section className="mb-12">
-              <h2 className="text-2xl text-accent font-bold mb-4 flex items-center border-l-4 border-accent pl-4">
-                5. Network Resilience & Threat Mitigation
+            {/* 5. MALICIOUS NODE HANDING */}
+            <section className="mb-16">
+              <h2 className="text-2xl text-accent font-bold mb-6 flex items-center border-l-4 border-accent pl-4 uppercase">
+                4. Threat Mitigation: Malicious Nodes
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-6">
-                WEBD2 mathematically mitigates both localized topological threats
-                (bad computational nodes) and vast macro-threats (global
-                bandwidth exhaustion).
+                WebDollar 2 is built with a <strong>Deterministically Hostile</strong> mindset. The protocol assumes every node could be malicious.
               </p>
-
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl text-white font-bold mb-2">
-                    5.1. Sybil Resistance Against Malicious Nodes
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Because all transactions mandate local Phase-1 verification
-                    (via unforgeable <code>ed25519</code> hashes), any modified
-                    or spoofed payload instantly triggers deterministic
-                    cryptographic invalidity and is autonomously dropped by the
-                    adjacent peer mesh. A compromised node possesses identically
-                    zero capability to manipulate the ledger matrix.
+              <div className="space-y-4">
+                <div className="flex gap-4 items-start">
+                  <div className="bg-red-500/10 p-2 rounded border border-red-500/20 text-red-400 font-black text-xs">REJECT</div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    <strong>Cryptographic Assertion:</strong> Every block and transaction must be signed. If a malicious node tries to inject a fake transaction, 
+                    the EdDSA math instantly fails. Adjacent peers detect the signature mismatch and drop the payload before it ever reaches the DIELBS engine.
                   </p>
                 </div>
-                <div>
-                  <h3 className="text-xl text-white font-bold mb-2">
-                    5.2. Asymptotic Bandwidth Conservation
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    An individual routing node synchronizes via dynamic routing
-                    tables, sustaining only a minimalist subset of direct peer
-                    relationships (e.g., $k=8$). Routing nodes only propagate
-                    differential state parameters (byte-sized hashes), ensuring
-                    per-node bandwidth consumption remains strictly
-                    micro-fragmentary regardless of exponential macroscopic
-                    scaling.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-xl text-white font-bold mb-2">
-                    5.3. Deterministic Elimination of Double-Spending
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Even if a malicious participant propagates simultaneous
-                    mathematical signatures globally, the DIELBS execution layer
-                    deterministically voids trailing timestamps inside the
-                    memory buffer before blocks are even serialized, eradicated
-                    double-spending vectors cleanly.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-xl text-white font-bold mb-2">
-                    5.4. Browser Execution Integrity Fallacy
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    The blockchain derives absolute trust strictly from
-                    underlying mathematics, not browser software integrity. Even
-                    if a browser instance is compromised by nefarious malware,
-                    the attacker cannot forge an outbound transaction payload
-                    without direct possession of the isolated private key
-                    entropy. Cryptography guards the ledger.
+                <div className="flex gap-4 items-start">
+                  <div className="bg-red-500/10 p-2 rounded border border-red-500/20 text-red-400 font-black text-xs">ISOLATE</div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    <strong>Peer Quarantining:</strong> Nodes that repeatedly broadcast invalid data are automatically blacklisted by the P2P mesh. 
+                    The network topologically "routes around" the problem, isolating the malicious node until it has zero peer connections, effectively cutting it off from the global ledger.
                   </p>
                 </div>
               </div>
             </section>
 
-            <section className="mb-12">
-              <h2 className="text-2xl text-accent font-bold mb-4 flex items-center border-l-4 border-accent pl-4">
-                6. Algorithmic Tokenomics & V1 Migration
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                The monetary protocol maintains a fixed constraint
-                of 68,000,000,000 WEBD2. To honor the early legacy network,
-                <strong>14,200,000,000 WEBD2</strong> is held in a strict Active Migration Reserve,
-                effectively burning the unverified V1 developer funds.
-                The protocol allocates <strong>6,800,000,000 WEBD2 (10%)</strong> to development,
-                and <strong>3,400,000,000 WEBD2 (5%)</strong> to the Foundation Fund.
-                The remaining maximum supply of <strong>43,600,000,000 WEBD2</strong> remains designated purely for
-                public browser mining with a 5-second block time and an automated halving cycle every 3 years to ensure 100-year emission longevity.
-              </p>
-            </section>
-
-            <section className="mb-12 bg-card border border-accent/20 rounded-lg p-8 relative overflow-hidden">
+            {/* 6. DIELBS ENGINE */}
+            <section className="mb-16 bg-accent/5 border border-accent/20 rounded-lg p-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-bl-full pointer-events-none"></div>
-              <h2 className="text-2xl text-accent font-bold mb-4 flex items-center z-10 relative">
-                7. The End-State: An Untamed Settlement Engine
+              <h2 className="text-2xl text-accent font-bold mb-4 flex items-center z-10 relative uppercase font-black">
+                5. The DIELBS Engine: Proprietary Core
               </h2>
-              <p className="text-muted-foreground leading-relaxed mb-4 relative z-10">
-                WEBD2ollar 2 securely confirms that high-throughput
-                decentralization does not conflict with consumer-grade hardware.
-                However, the true disruptor of this protocol lies entirely
-                encapsulated within the standalone{" "}
-                <strong>DIELBS Engine</strong>.
+              <p className="text-muted-foreground leading-relaxed mb-6 relative z-10 italic">
+                The absolute speed and stability of WEBD2 are driven by the DIELBS Engine—a proprietary execution module designed for extreme throughput.
               </p>
-              <p className="text-muted-foreground leading-relaxed mb-4 relative z-10">
-                DIELBS is not inherently bound to the mechanics of browser-based
-                PoS topologies—it is an untamed, standalone execution beast.
-                Because it operates entirely by abandoning synchronous
-                read/write deadlocks in favor of aggressive asynchronous state
-                caching, it categorically guarantees a true{" "}
-                <strong className="text-white">
-                  0.5 millisecond (½ ms) maximum execution latency
-                </strong>
-                .
+              <p className="text-sm text-white/80 leading-relaxed mb-4 relative z-10">
+                While standard blockchains get bogged down by synchronous "waiting" (where every step must finish before the next begins), 
+                DIELBS utilizes <strong>Massively Parallel State Caching</strong>. It effectively predicts and validates thousands of theoretical 
+                network states every second, only committing the valid ones to the permanent record in ultra-fast 5-second batches.
               </p>
-              <p className="text-muted-foreground leading-relaxed mb-4 relative z-10">
-                When deployed and scaled efficiently inside optimized
-                high-density environments, the mathematical constraints of
-                DIELBS dissolve. The potential transactional limits scale to{" "}
-                <strong className="text-white">
-                  millions of Transactions Per Second (TPS)
-                </strong>
-                , eclipsing global centralized financial routing infrastructures
-                (such as Visa or MasterCard) by several orders of magnitude. It
-                stands capable of validating immense, synchronous liquidity
-                loads with blistering ferocity before finally anchoring them
-                into cryptographical immutability.
+              <div className="bg-black/40 p-4 rounded border border-primary/20 text-[10px] sm:text-xs font-mono text-primary/70 leading-relaxed">
+                <strong className="text-accent underline">SECURITY NOTICE:</strong> The specific algorithmic batching and memory-threading 
+                logic of DIELBS remains closed-source to prevent adversarial reverse-engineering. It functions as a "black box" 
+                execution layer that guarantees sub-millisecond local latency regardless of global network load.
+              </div>
+            </section>
+
+             {/* 7. TOKENOMICS */}
+             <section className="mb-16">
+              <h2 className="text-2xl text-accent font-bold mb-4 flex items-center border-l-4 border-accent pl-4 uppercase">
+                6. TOKENOMICS & MIGRATION
+              </h2>
+              <p className="text-muted-foreground leading-relaxed">
+                The monetary protocol maintains a fixed maximum constraint
+                of <strong>68,000,000,000 WEBD2</strong>. 
+                The distribution is strictly partitioned as follows:
               </p>
-              <p className="text-accent/90 leading-relaxed font-bold mt-6 border-l-2 border-accent pl-4 relative z-10 bg-accent/5 p-4 rounded-r-md">
-                WEBD2 presents a protocol where classical architectural bounds
-                have been intentionally shattered. The sheer transactional
-                velocity of the DIELBS engine is inherently intimidating; the
-                protocol was not designed to be throttled or tamed, but to
-                operate aggressively as the definitive backend execution engine
-                for the modern financial web.
+              <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+                <li className="flex justify-between border-b border-primary/10 pb-2">
+                  <span>V1 MIGRATION RESERVE (ACTIVE CLAIM ONLY)</span>
+                  <span className="text-accent font-bold">14,200,000,000 WEBD2</span>
+                </li>
+                <li className="flex justify-between border-b border-primary/10 pb-2">
+                  <span>PUBLIC BROWSER MINING CACHE (100 YEAR EMISSION)</span>
+                  <span className="text-white font-bold">43,600,000,000 WEBD2</span>
+                </li>
+                <li className="flex justify-between border-b border-primary/10 pb-2">
+                  <span>DEVELOPMENT & INFRASTRUCTURE RESERVE (10%)</span>
+                  <span>6,800,000,000 WEBD2</span>
+                </li>
+                <li className="flex justify-between border-b border-primary/10 pb-2">
+                  <span>FOUNDATION & ECOSYSTEM FUND (5%)</span>
+                  <span>3,400,000,000 WEBD2</span>
+                </li>
+              </ul>
+              <p className="text-[10px] text-muted-foreground mt-4 italic">
+                Emission uses a 3-year halving cycle with a 5-second block time, ensuring sustained network incentive for a century of consensus participation.
               </p>
             </section>
+
+            <div className="text-center pt-20 pb-12 border-t border-primary/20">
+              <h2 className="text-4xl font-black text-white mb-8 tracking-tight">
+                ARE YOU READY?
+              </h2>
+              <p className="text-white/70 text-2xl mb-12 max-w-2xl mx-auto font-bold leading-relaxed">
+                The technology is live. The ledger is immutable. 
+                Open your wallet and join the next generation of the financial web.
+              </p>
+              <Link href="/auth">
+                <Button className="btn-neon text-2xl px-12 py-12 h-auto w-full sm:w-auto font-black tracking-widest shadow-2xl shadow-primary/30 border-2 border-primary/50">
+                  GENERATE YOUR WALLET
+                </Button>
+              </Link>
+            </div>
           </div>
         </motion.div>
       </div>
