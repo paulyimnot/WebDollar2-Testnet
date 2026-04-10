@@ -1212,8 +1212,8 @@ export async function registerRoutes(
             const availableBalance = parseFloat(lockedUser.balance || "0");
             
             // Re-calculate rewards using the locked record's timestamp (Security: Anti-Multi-Tab exploit)
-            const trueRewards = calculateDIELBSParticipationRewards(latestStaked, totalStakedNum, lockedUser.lastStakeRewardClaim);
-            if (trueRewards <= 0.0001) return; // Already claimed by another tab
+            const trueRewards = calculateDIELBSParticipationRewards(latestStaked, totalStakedNum, lockedUser.lastStakeRewardClaim, currentHeight);
+            if (isNaN(trueRewards) || trueRewards <= 0.0001) return; // Already claimed by another tab
 
             const newBalance = (availableBalance + trueRewards).toFixed(4);
             
