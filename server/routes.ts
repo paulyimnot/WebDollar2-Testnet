@@ -239,10 +239,13 @@ export async function registerRoutes(
 
       console.log(`[LOGIN] Password valid for "${rawTrimmed}", 2FA enabled: ${user.is2faEnabled}, has TOTP: ${!!user.totpSecret}`);
 
-      // 🛡️ PERMANENT OWNER PROMOTION: Ensure paulyimnot always has Admin rights
-      if (user.username.toLowerCase() === "paulyimnot") {
-        await db.update(users).set({ isDev: true }).where(eq(users.id, user.id));
-        user.isDev = true;
+      // 🛡️ PERMANENT OWNER PROMOTION: Ensure specified admins always have Admin rights
+      const adminUsers = (process.env.ADMIN_USERNAMES || "").split(",").map(u => u.trim().toLowerCase());
+      if (adminUsers.includes(user.username.toLowerCase())) {
+        if (!user.isDev) {
+          await db.update(users).set({ isDev: true }).where(eq(users.id, user.id));
+          user.isDev = true;
+        }
       }
 
       if (user.is2faEnabled && user.totpSecret) {
@@ -279,7 +282,8 @@ export async function registerRoutes(
     if (!user) return res.status(401).json({ message: "User not found" });
 
     // 🛡️ BACKGROUND PROMOTION: Fix for sticky sessions
-    if (user.username.toLowerCase() === "paulyimnot" && !user.isDev) {
+    const adminUsers = (process.env.ADMIN_USERNAMES || "").split(",").map(u => u.trim().toLowerCase());
+    if (adminUsers.includes(user.username.toLowerCase()) && !user.isDev) {
       await db.update(users).set({ isDev: true }).where(eq(users.id, user.id));
       user.isDev = true;
     }
@@ -1879,7 +1883,8 @@ export async function registerRoutes(
     const existingMigration = await storage.getUserByUsername("migration_wallet");
     if (existingMigration) return res.status(400).json({ message: "Genesis wallets already generated." });
 
-    const MINT_PASSWORD = process.env.GENESIS_MINT_PASSWORD || "AUTO_GENESIS_SECURE_PASSWORD"; // Use env var in production
+    const MINT_PASSWORD = process.env.GENESIS_MINT_PASSWORD;
+    if (!MINT_PASSWORD) return res.status(500).json({ message: "Network Security Error: GENESIS_MINT_PASSWORD not configured." });
 
     const createGenesisUser = async (username: string, amount: string, isDevFlag: boolean, isFoundationFlag: boolean) => {
         const hashedPassword = await bcrypt.hash(MINT_PASSWORD, 12);

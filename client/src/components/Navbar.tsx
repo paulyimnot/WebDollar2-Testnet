@@ -9,7 +9,7 @@ export function Navbar() {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [logoClicks, setLogoClicks] = useState(0);
+
 
   const isActive = (path: string) => location === path;
 
@@ -29,15 +29,7 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background/90 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
-        <Link href="/" onClick={(e) => {
-          setLogoClicks(prev => {
-            if (prev + 1 >= 5) {
-              setLocation("/admin");
-              return 0;
-            }
-            return prev + 1;
-          });
-        }} className="flex items-center space-x-4 group shrink-0">
+        <Link href="/" className="flex items-center space-x-4 group shrink-0">
           <img src={logoImg} alt="WebDollar 2" className="w-16 h-16 rounded-full object-cover border-2 border-accent/20" />
           <span className="font-heading font-extrabold text-2xl tracking-tight text-white group-hover:text-accent transition-colors hidden sm:inline">
             <span className="text-accent">WebDollar</span> <span className="text-primary text-base">2</span>
