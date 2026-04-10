@@ -280,15 +280,29 @@ export default function Wallet() {
                 <span className="text-[10px] font-mono text-muted-foreground bg-white/5 px-2 py-0.5 rounded border border-white/10 italic">Block #{blockchainStatus.blockNumber?.toLocaleString()}</span>
               </div>
               
-              <div className="flex items-center gap-3">
-                 <div className="flex items-center gap-1.5 bg-accent/10 border border-accent/30 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(255,193,44,0.1)]">
-                    <Zap className="w-3 h-3 text-accent fill-accent/20" />
-                    <span className="text-[10px] font-mono font-black text-white leading-none">TX SPEED: <span className="text-accent underline">~4.8s</span></span>
+              <div className="flex flex-col sm:flex-row items-center gap-8 mt-4">
+                 <div className="flex flex-col items-center justify-center gap-4 bg-accent/10 border border-accent/30 px-12 py-12 rounded-2xl shadow-[0_0_50px_rgba(255,193,44,0.15)] w-full sm:w-auto min-w-[280px]">
+                    <div className="flex items-center gap-3">
+                       <Zap className="w-8 h-8 text-accent fill-accent/20 animate-pulse" />
+                       <span className="text-sm font-heading font-black text-accent tracking-[0.3em] uppercase">TX SPEED</span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-7xl md:text-8xl font-mono font-black text-white leading-none tracking-tighter">~4.8</span>
+                      <span className="text-2xl font-black text-accent/80 uppercase tracking-widest">SEC</span>
+                    </div>
                  </div>
                  
-                 <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/30 px-2 py-0.5 rounded group hover:border-primary transition-colors cursor-help">
-                    <div className={`w-1.5 h-1.5 rounded-full ${blockchainStatus.txLatency && blockchainStatus.txLatency < 200 ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                    <span className="text-[10px] font-mono font-black text-white leading-none uppercase">TX LATENCY: <span className="text-primary">{blockchainStatus.txLatency ? `${blockchainStatus.txLatency}ms` : "---"}</span></span>
+                 <div className="flex flex-col items-center justify-center gap-4 bg-primary/10 border border-primary/30 px-12 py-12 rounded-2xl group hover:border-primary transition-all cursor-help w-full sm:w-auto min-w-[280px]">
+                    <div className="flex items-center gap-3">
+                       <div className={`w-4 h-4 rounded-full animate-ping ${blockchainStatus.txLatency && blockchainStatus.txLatency < 200 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                       <span className="text-sm font-heading font-black text-primary tracking-[0.3em] uppercase">TX LATENCY</span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-7xl md:text-8xl font-mono font-black text-white leading-none tracking-tighter">
+                         {blockchainStatus.txLatency ? blockchainStatus.txLatency : "---"}
+                      </span>
+                      <span className="text-2xl font-black text-primary/80 uppercase tracking-widest">MS</span>
+                    </div>
                  </div>
               </div>
             </div>
