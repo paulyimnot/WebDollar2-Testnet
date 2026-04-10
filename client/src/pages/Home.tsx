@@ -97,6 +97,24 @@ export default function Home() {
               CURRENCY OF THE INTERNET
             </p>
 
+            {/* HERITAGE & INDEPENDENCE NOTICE (MOVED TO HERO) */}
+            <div className="mb-8 max-w-4xl mx-auto px-6">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                 <Globe className="w-5 h-5 text-accent opacity-50" />
+                 <span className="text-xs font-heading text-accent/50 uppercase tracking-[0.3em] font-black">Project Independence & Heritage</span>
+              </div>
+              <p className="text-sm sm:text-lg md:text-lg text-muted-foreground leading-relaxed max-w-4xl mx-auto opacity-80">
+                WDollar 2 is a separate entity and independent blockchain protocol built to honor the browser-native architecture of the original WebDollar project. 
+                Honor a <strong>1:1 migration</strong> for all legitimate V1 holders upon Mainnet Launch.
+              </p>
+            </div>
+
+            <p className="text-sm sm:text-lg md:text-lg text-muted-foreground mb-12 max-w-4xl mx-auto px-6 font-normal opacity-80 leading-relaxed">
+                First-of-its-kind, browser-native blockchain utilizing the high-throughput DIELBS consensus engine. 
+                Secured by ed25519/secp256k1 signatures with 5-second deterministic finality and native WebAssembly validation. 
+                Mass adoption through absolute decentralization and zero-installation infrastructure.
+            </p>
+
             {/* EARLY ACCESS CARD PROMO */}
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
@@ -149,12 +167,6 @@ export default function Home() {
                 </div>
               </div>
             </motion.div>
-
-            <p className="text-sm sm:text-lg md:text-lg text-muted-foreground mb-12 max-w-4xl mx-auto px-6 font-normal opacity-80 leading-relaxed">
-                First-of-its-kind, browser-native blockchain utilizing the high-throughput DIELBS consensus engine. 
-                Secured by ed25519/secp256k1 signatures with 5-second deterministic finality and native WebAssembly validation. 
-                Mass adoption through absolute decentralization and zero-installation infrastructure.
-            </p>
 
             <div className="flex flex-col items-center gap-4 mt-8">
               {blockchainStatus?.connected && (
@@ -364,21 +376,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* HERITAGE & INDEPENDENCE NOTICE */}
-      <section className="py-12 bg-black/50 border-t border-primary/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center space-y-4">
-            <div className="flex items-center justify-center gap-2 mb-4">
-               <Globe className="w-5 h-5 text-accent opacity-50" />
-               <span className="text-[10px] font-mono text-accent/50 uppercase tracking-[0.3em] font-black">Project Independence & Heritage</span>
-            </div>
-            <p className="text-[11px] font-mono text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              WDollar 2 is a separate entity and independent blockchain protocol built to honor the browser-native architecture of the original WebDollar project. 
-              We are not affiliated with, endorsed by, or connected to webdollar.io. All network participants are original. As a mark of respect for the community, we are honoring a <strong>1:1 migration</strong> for all legitimate V1 holders upon Mainnet Launch.
-            </p>
-          </div>
-        </div>
-      </section>
+
 
     </div>
   );

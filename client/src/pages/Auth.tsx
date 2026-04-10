@@ -205,7 +205,7 @@ export default function Auth() {
                   ⚠️ Reminder: Login is case-sensitive, of course.
                 </p>
                 <div className="flex justify-center mt-6">
-                  <Button type="submit" disabled={isLoggingIn} className="w-1/2 btn-neon-filled py-6 text-sm font-bold tracking-widest" data-testid="button-login-submit">
+                  <Button type="submit" disabled={isLoggingIn} className="w-[200px] btn-neon-filled h-12 text-xs font-black tracking-[0.2em] uppercase" data-testid="button-login-submit">
                     {isLoggingIn ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     AUTHENTICATE
                   </Button>
@@ -239,9 +239,11 @@ export default function Auth() {
                 <p className="text-[10px] text-muted-foreground font-mono uppercase font-bold tracking-wider leading-relaxed bg-black/40 p-3 rounded border border-primary/10">
                   ⚡ SECURE: A unique cryptographic wallet with a 12-word seed phrase will be generated for your browser.
                 </p>
-                <Button type="submit" disabled={isRegistering} className="w-full btn-gold mt-8 py-10 text-2xl font-black tracking-widest" data-testid="button-register-submit">
-                  {isRegistering ? <Loader2 className="w-6 h-6 animate-spin" /> : "GENERATE WALLET"}
-                </Button>
+                <div className="flex justify-center mt-8">
+                  <Button type="submit" disabled={isRegistering} className="w-[220px] btn-gold h-12 text-xs font-black tracking-[0.2em] uppercase" data-testid="button-register-submit">
+                    {isRegistering ? <Loader2 className="w-4 h-4 animate-spin" /> : "GENERATE WALLET"}
+                  </Button>
+                </div>
               </form>
             </TabsContent>
 

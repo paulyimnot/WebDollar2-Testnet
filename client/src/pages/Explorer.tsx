@@ -92,7 +92,7 @@ export default function Explorer() {
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="Search Address, Hash, Block..."
-            className="pl-14 py-8 bg-input border-2 border-primary/30 font-mono text-xl text-white placeholder:text-primary/30"
+            className="pl-14 h-14 bg-input border-2 border-primary/30 font-mono text-lg text-white placeholder:text-primary/30"
             data-testid="input-explorer-search"
           />
           {searchQuery && (
@@ -101,8 +101,8 @@ export default function Explorer() {
             </button>
           )}
         </div>
-        <Button onClick={handleSearch} disabled={isSearching || searchQuery.trim().length < 3} className="btn-neon shrink-0 w-full sm:w-[200px] py-6 text-sm font-bold uppercase tracking-widest" data-testid="button-search">
-          {isSearching ? <Loader2 className="w-6 h-6 animate-spin" /> : "FIND DATA"}
+        <Button onClick={handleSearch} disabled={isSearching || searchQuery.trim().length < 3} className="btn-neon shrink-0 w-full sm:w-[160px] h-14 text-[10px] font-black uppercase tracking-[0.2em]" data-testid="button-search">
+          {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : "FIND DATA"}
         </Button>
       </div>
 
