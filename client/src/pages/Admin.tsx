@@ -258,33 +258,35 @@ export default function Admin() {
         </div>
       </div>
 
-      <CyberCard title="GENESIS INITIALIZATION" className="mb-8 border-yellow-500/50">
-        <div className="p-4 space-y-4">
-          <p className="text-xs font-mono text-muted-foreground">
-            ⚠️ WARNING: This will instantiate the 3 master treasury wallets (Migration, Dev, Foundation) and mint the initial supply. This can only be performed once per network reset.
-          </p>
-          <Button 
-            className="w-full btn-gold border-yellow-500/50"
-            onClick={async () => {
-              if (window.confirm("ARE YOU SURE? This will mint the genesis supply of 53.4 Billion WEBD2.")) {
-                try {
-                  const res = await fetch("/api/admin/genesis", { method: "POST", credentials: "include" });
-                  const data = await res.json();
-                  if (res.ok) {
-                    toast({ title: "GENESIS COMPLETE", description: data.message });
-                  } else {
-                    toast({ title: "GENESIS FAILED", description: data.message, variant: "destructive" });
+      {(!treasury?.migration || treasury.migration.address === "NOT_FOUND") && (
+        <CyberCard title="GENESIS INITIALIZATION" className="mb-8 border-yellow-500/50 shadow-[0_0_30px_rgba(255,193,44,0.1)]">
+          <div className="p-4 space-y-4">
+            <p className="text-xs font-mono text-muted-foreground italic">
+              ⚠️ WARNING: This will instantiate the 3 master treasury wallets (Migration, Dev, Foundation) and mint the initial supply. This can only be performed once per network reset.
+            </p>
+            <Button 
+              className="w-full btn-gold border-yellow-500/50 py-6 text-lg font-black"
+              onClick={async () => {
+                if (window.confirm("ARE YOU SURE? This will mint the genesis supply of 53.4 Billion WEBD2.")) {
+                  try {
+                    const res = await fetch("/api/admin/genesis", { method: "POST", credentials: "include" });
+                    const data = await res.json();
+                    if (res.ok) {
+                      toast({ title: "GENESIS COMPLETE", description: data.message });
+                    } else {
+                      toast({ title: "GENESIS FAILED", description: data.message, variant: "destructive" });
+                    }
+                  } catch (e: any) {
+                    toast({ title: "ERROR", description: e.message, variant: "destructive" });
                   }
-                } catch (e: any) {
-                  toast({ title: "ERROR", description: e.message, variant: "destructive" });
                 }
-              }
-            }}
-          >
-            <Rocket className="w-4 h-4 mr-2" /> INITIALIZE GENESIS NETWORK
-          </Button>
-        </div>
-      </CyberCard>
+              }}
+            >
+              <Rocket className="w-6 h-6 mr-3" /> INITIALIZE GENESIS NETWORK
+            </Button>
+          </div>
+        </CyberCard>
+      )}
 
       <div className="mb-8 p-4 bg-card border border-accent/20 rounded-md font-mono text-sm">
         <div className="flex flex-wrap gap-6 justify-around">
