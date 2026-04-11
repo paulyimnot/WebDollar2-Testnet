@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { CheckCircle2, XCircle, Clock, Shield, Loader2, ExternalLink, Eye, CreditCard, Mail, Users, Search, UserCog, ShieldAlert, Rocket } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Shield, Loader2, ExternalLink, Eye, CreditCard, Mail, Users, Search, UserCog, ShieldAlert, Rocket, Radio } from "lucide-react";
 
 export default function Admin() {
   const [_, setLocation] = useLocation();
@@ -66,6 +66,18 @@ export default function Admin() {
       return await res.json();
     },
     enabled: !!user?.isDev,
+  });
+
+  const { data: livePeers } = useQuery<{ peers: any[]; total: number }>({
+    queryKey: ["/api/admin/peers/live"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/peers/live", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch peers");
+      return await res.json();
+    },
+    enabled: !!user?.isDev,
+    refetchInterval: 10000,
+    placeholderData: (prev: any) => prev,
   });
 
   const approveMutation = useMutation({
@@ -253,8 +265,65 @@ export default function Admin() {
             </div>
           )}
           <div className="text-[8px] text-muted-foreground mt-1 uppercase">5% Ecosystem Growth</div>
-        </div>
       </div>
+
+      {/* LIVE P2P MESH MONITOR */}
+      <CyberCard title="LIVE P2P MESH MONITOR" className="mb-8 border-green-500/30">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="font-mono text-green-400 font-black text-lg">{livePeers?.total || 0}</span>
+              <span className="font-mono text-muted-foreground text-xs uppercase">active peers</span>
+            </div>
+            <div className="text-[9px] font-mono text-muted-foreground bg-white/5 px-2 py-1 rounded">AUTO-REFRESH 10s</div>
+          </div>
+
+          {livePeers?.peers && livePeers.peers.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full font-mono text-sm text-left">
+                <thead>
+                  <tr className="border-b border-green-500/20 text-green-400/70 text-[10px] uppercase tracking-wider">
+                    <th className="py-2 px-3">Peer ID</th>
+                    <th className="py-2 px-3">Mesh Links</th>
+                    <th className="py-2 px-3">Uptime</th>
+                    <th className="py-2 px-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-green-500/10">
+                  {livePeers.peers.map((p: any) => {
+                    const mins = Math.floor(p.uptimeMs / 60000);
+                    const hrs = Math.floor(mins / 60);
+                    const uptime = hrs > 0 ? `${hrs}h ${mins % 60}m` : `${mins}m`;
+                    return (
+                      <tr key={p.id} className="hover:bg-green-500/5 transition-colors">
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <Radio className="w-3 h-3 text-green-400" />
+                            <span className="text-white font-bold">{p.id}</span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="text-primary">{p.meshLinks}</span>
+                          <span className="text-muted-foreground text-[10px] ml-1">nodes</span>
+                        </td>
+                        <td className="py-2.5 px-3 text-muted-foreground">{uptime}</td>
+                        <td className="py-2.5 px-3">
+                          <span className="text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-sm">CONNECTED</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground font-mono text-sm">
+              No peers currently connected to the mesh.
+            </div>
+          )}
+        </div>
+      </CyberCard>
 
       {(!treasury?.migration || treasury.migration.address === "NOT_FOUND") && (
         <CyberCard title="GENESIS INITIALIZATION" className="mb-8 border-yellow-500/50 shadow-[0_0_30px_rgba(255,193,44,0.1)]">

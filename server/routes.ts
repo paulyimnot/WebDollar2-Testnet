@@ -19,7 +19,7 @@ import OpenAI from "openai";
 const PostgresStore = pgSession(session);
 import { pool } from "./db.js";
 
-import { getConnectedPeersCount } from "./signaling.js";
+import { getConnectedPeersCount, getLivePeerList } from "./signaling.js";
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const faucetIpStamps = new Map<string, number>();
 export let isBlockchainPaused = false;
@@ -1847,6 +1847,16 @@ export async function registerRoutes(
     if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
 
     res.json({ isPaused: isBlockchainPaused, connectedPeers: getConnectedPeersCount() });
+  });
+
+  app.get("/api/admin/peers/live", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    // @ts-ignore
+    const admin = await storage.getUser(req.session.userId);
+    if (!admin?.isDev) return res.status(403).json({ message: "Admin access required" });
+
+    res.json({ peers: getLivePeerList(), total: getConnectedPeersCount() });
   });
 
   app.post("/api/admin/network/pause", async (req, res) => {

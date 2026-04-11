@@ -1,9 +1,19 @@
 import { WebSocketServer, WebSocket } from "ws";
 
-const peers = new Map<string, { ws: WebSocket; id: string; links: Set<string> }>();
+const peers = new Map<string, { ws: WebSocket; id: string; links: Set<string>; connectedAt: number }>();
 
 export function getConnectedPeersCount(): number {
   return peers.size;
+}
+
+export function getLivePeerList(): Array<{ id: string; meshLinks: number; connectedAt: number; uptimeMs: number }> {
+  const now = Date.now();
+  return Array.from(peers.values()).map(p => ({
+    id: p.id,
+    meshLinks: p.links.size,
+    connectedAt: p.connectedAt,
+    uptimeMs: now - p.connectedAt,
+  }));
 }
 
 export function setupSignaling(server: any) {
@@ -16,7 +26,7 @@ export function setupSignaling(server: any) {
 
   wss.on('connection', (ws) => {
       const peerId = `peer-${nextId++}`;
-      peers.set(peerId, { ws, id: peerId, links: new Set() });
+      peers.set(peerId, { ws, id: peerId, links: new Set(), connectedAt: Date.now() });
       console.log(`✦ Peer connected: ${peerId} (${peers.size} total)`);
 
       // Assign max 8 random peers to create a stable P2P mesh graph
