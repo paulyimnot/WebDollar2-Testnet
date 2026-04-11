@@ -72,6 +72,9 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private cachedSupply: { value: string; timestamp: number } | null = null;
+  private SUPPLY_CACHE_TTL = 60000; // 60 seconds
+
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -400,8 +403,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTotalMinedSupply(): Promise<string> {
+    const now = Date.now();
+    if (this.cachedSupply && (now - this.cachedSupply.timestamp) < this.SUPPLY_CACHE_TTL) {
+      return this.cachedSupply.value;
+    }
+
     const [result] = await db.select({ total: sql<string>`COALESCE(SUM(reward::numeric), 0)` }).from(blocks);
-    return result?.total || "0";
+    const value = result?.total || "0";
+    
+    this.cachedSupply = { value, timestamp: now };
+    return value;
   }
 
   async updateConversionStatus(id: number, status: string, amountApproved?: string): Promise<ConversionRequest> {

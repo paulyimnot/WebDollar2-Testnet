@@ -23,7 +23,8 @@ import { getConnectedPeersCount, getLivePeerList } from "./signaling.js";
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const faucetIpStamps = new Map<string, number>();
 export let isBlockchainPaused = false;
-let lastTxLatency = 12; // ms, default high-performance baseline
+let lastTxLatency = 12; // ms, baseline
+let latencyHistory: number[] = [12, 12, 12, 12, 12]; // Keep a small window for moving average
 
 function rateLimit(key: string, maxAttempts: number, windowMs: number): boolean {
   const now = Date.now();
@@ -528,33 +529,35 @@ export async function registerRoutes(
   // === Alias Resolution ===
 
   app.get('/api/alias/resolve/:username', async (req, res) => {
-    const { username } = req.params;
+    const { username: rawLookup } = req.params;
+    const lookup = rawLookup.trim();
     
-    // Step 1: Try resolving by custom alias first
-    const aliasUser = await storage.getUserByAlias(username);
+    // Step 1: Try resolving by custom alias first (Case-Insensitive)
+    const aliasResult = await db.execute(sql`SELECT * FROM users WHERE alias ILIKE ${lookup} LIMIT 1`);
+    const aliasUser = aliasResult.rows[0] as any;
     
-    if (aliasUser && aliasUser.walletAddress) {
-      // Alias found — payment ALWAYS goes through regardless of active state
-      // The ON/OFF toggle only controls whether the alias name is publicly visible
+    if (aliasUser && aliasUser.wallet_address) {
       return res.json({ 
-        address: aliasUser.walletAddress, 
-        username: aliasUser.isAliasActive ? (aliasUser.alias || aliasUser.username) : "Anonymous Wallet"
+        address: aliasUser.wallet_address, 
+        username: aliasUser.is_alias_active ? (aliasUser.alias || aliasUser.username) : "Anonymous Wallet"
       });
     }
     
-    // Step 2: Fallback to username lookup (for users who haven't set a custom alias)
-    const userByName = await storage.getUserByUsername(username);
+    // Step 2: Fallback to username lookup (Case-Insensitive)
+    const userResult = await db.execute(sql`SELECT * FROM users WHERE username ILIKE ${lookup} LIMIT 1`);
     
-    if (!userByName || !userByName.walletAddress) {
+    if (userResult.rows.length === 0 || !(userResult.rows[0] as any).wallet_address) {
       return res.status(404).json({ message: "Alias or username not found on the network." });
     }
+
+    const userByName = userResult.rows[0] as any;
     
     // Security: If this user HAS a custom alias set, don't allow resolution by raw username
     if (userByName.alias && userByName.alias.length > 0) {
       return res.status(404).json({ message: "This user has a custom alias configured. Please use their alias to send funds." });
     }
     
-    res.json({ address: userByName.walletAddress, username: userByName.username });
+    res.json({ address: userByName.wallet_address, username: userByName.username });
   });
 
   app.post('/api/alias/update', async (req, res) => {
@@ -876,9 +879,14 @@ export async function registerRoutes(
         sender.walletAddress!,
         recipientAddress.trim()
       );
-      lastTxLatency = Math.round(performance.now() - startTime);
+      const currentLat = Math.round(performance.now() - startTime);
+      
+      // Update moving average
+      latencyHistory.push(currentLat);
+      if (latencyHistory.length > 5) latencyHistory.shift();
+      lastTxLatency = Math.round(latencyHistory.reduce((a, b) => a + b, 0) / latencyHistory.length);
 
-      res.json(tx);
+      res.status(201).json({ ...tx, txLatency: currentLat });
     } catch (err: any) {
       return res.status(400).json({ message: err.message || "Transfer failed" });
     }
@@ -966,9 +974,10 @@ export async function registerRoutes(
       lastTxLatency = Math.round(performance.now() - startTime);
 
       // Mark as private — addresses are masked in the response
-      res.json({
+      res.status(201).json({
         ...tx,
         isPrivate: true,
+        txLatency: lastTxLatency,
         senderAddress: (tx.senderAddress && tx.senderAddress !== "FAUCET_TESTNET" && !tx.senderAddress.startsWith("SYSTEM_")) ? tx.senderAddress.substring(0, 8) + "..." : tx.senderAddress,
         receiverAddress: (tx.receiverAddress && !tx.receiverAddress.startsWith("SYSTEM_")) ? tx.receiverAddress.substring(0, 8) + "..." : tx.receiverAddress,
       });
@@ -1195,15 +1204,14 @@ export async function registerRoutes(
         // Re-fetch user after release
         const updatedUser = await storage.getUser(user.id);
         const latestBlock = await storage.getLatestBlock();
-        const blocksList = await storage.getBlocks(1000);
-        const totalMined = blocksList.reduce((sum: number, b: any) => sum + parseFloat(b.reward || "0"), 0);
+        const totalMined = await storage.getTotalMinedSupply();
         return res.json({
           stakedBalance: "0",
           pendingRewards: "0",
           apy: 0,
           totalNetworkStaked: (totalStakedNum - userStaked).toFixed(4),
           blockHeight: latestBlock?.id || 0,
-          circulatingSupply: (totalMined + 6800000000 + 3400000000).toFixed(4),
+          circulatingSupply: (parseFloat(totalMined) + 6800000000 + 3400000000).toFixed(4),
           stakingStoppedAt: null,
           holdRemainingMs: 0,
           isOnHold: false,
@@ -2035,26 +2043,13 @@ export async function registerRoutes(
 
   app.get("/api/network/stats", async (_req, res) => {
     try {
-      const dbUsers = await db.select({ count: sql<number>`count(*)` }).from(users);
-      const dbBlocks = await db.select({ count: sql<number>`count(*)` }).from(blocks);
-      const dbTxs = await db.select({ count: sql<number>`count(*)` }).from(transactions);
-      
-      const latestBlock = await storage.getLatestBlock();
-      
-      // Calculate circulating supply (simplified)
-      const supplyResult = await db.execute(sql`SELECT SUM(balance) as total FROM users`);
-      // @ts-ignore
-      const circulatingSupply = supplyResult[0]?.total || "43600000000";
-
+      const stats = await storage.getNetworkStats();
       res.json({
-        totalUsers: Number(dbUsers[0]?.count || 0),
-        totalBlocks: Number(dbBlocks[0]?.count || 0),
-        totalTransactions: Number(dbTxs[0]?.count || 0),
-        circulatingSupply: String(circulatingSupply),
-        latestBlockTime: latestBlock?.timestamp || null,
+        ...stats,
         connectedPeers: getConnectedPeersCount(),
       });
     } catch(err) {
+      console.error("Network stats error:", err);
       res.status(500).json({ message: "Failed to fetch network stats" });
     }
   });
@@ -2176,15 +2171,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/network/stats", async (_req, res) => {
-    try {
-      const stats = await storage.getNetworkStats();
-      res.json(stats);
-    } catch (err) {
-      console.error("Network stats error:", err);
-      res.json({ totalUsers: 0, totalBlocks: 0, totalTransactions: 0, circulatingSupply: "10200000000.0000", latestBlockTime: null });
-    }
-  });
+
 
   app.get("/api/explorer/search", async (req, res) => {
     const q = (req.query.q as string || "").trim();

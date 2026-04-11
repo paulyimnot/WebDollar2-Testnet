@@ -75,8 +75,8 @@ export function useWallet() {
       queryClient.invalidateQueries({ queryKey: [api.explorer.transactions.path] });
       queryClient.invalidateQueries({ queryKey: [api.transactions.mine.path] });
       toast({
-        title: "TRANSACTION CONFIRMED",
-        description: `Overhead: ${data.overhead.toFixed(4)}ms | Broadcast: ${data.broadcastTime.toFixed(2)}ms`,
+        title: "TRANSACTION SECURED",
+        description: `Signing: ${data.overhead.toFixed(1)}ms | Pulse: ${data.txLatency || 0}ms | Sync: ${data.broadcastTime.toFixed(0)}ms`,
         className: "border-primary text-primary bg-black font-mono",
       });
     },
@@ -143,8 +143,8 @@ export function useWallet() {
       queryClient.invalidateQueries({ queryKey: [api.explorer.transactions.path] });
       queryClient.invalidateQueries({ queryKey: [api.transactions.mine.path] });
       toast({
-        title: "PRIVATE TRANSFER CONFIRMED",
-        description: `Privacy Shield: ${data.overhead.toFixed(4)}ms | Sync: ${data.broadcastTime.toFixed(2)}ms`,
+        title: "PRIVATE TRANSFER SECURED",
+        description: `Shielding: ${data.overhead.toFixed(1)}ms | Pulse: ${data.txLatency || 0}ms | Sync: ${data.broadcastTime.toFixed(0)}ms`,
         className: "border-accent text-accent bg-card font-mono",
       });
     },

@@ -186,13 +186,16 @@ export default function Wallet() {
       setIsResolvingAlias(true);
       try {
         const res = await fetch(`/api/alias/resolve/${aliasLookup}`);
-        if (!res.ok) throw new Error("Alias not found");
+        if (!res.ok) {
+           const errData = await res.json().catch(() => ({}));
+           throw new Error(errData.message || "Alias or username not found on the network.");
+        }
         const data = await res.json();
         finalRecipient = data.address;
         toast({ title: "ALIAS RESOLVED", description: `Sending to @${data.username} (${finalRecipient.substring(0, 12)}...)`, className: "font-mono border-accent/30 text-accent/80" });
-      } catch (e) {
+      } catch (e: any) {
         setIsResolvingAlias(false);
-        toast({ title: "ALIAS ERROR", description: "Username/Alias not found or has no active wallet.", variant: "destructive", className: "font-mono" });
+        toast({ title: "ALIAS ERROR", description: e.message || "Username/Alias not found or has no active wallet.", variant: "destructive", className: "font-mono" });
         return;
       }
       setIsResolvingAlias(false);
@@ -284,11 +287,11 @@ export default function Wallet() {
                 <span className="text-[10px] font-mono text-muted-foreground bg-white/5 px-2 py-0.5 rounded border border-white/10 italic">Block #{blockchainStatus.blockNumber?.toLocaleString()}</span>
               </div>
               
-              <div className="flex items-center gap-3 mt-4">
-                 <div className="flex items-center gap-2 bg-accent/10 border border-accent/30 px-3 py-1.5 rounded shadow-[0_0_15px_rgba(255,193,44,0.05)]">
+              <div className="flex flex-wrap items-center gap-3 mt-4">
+                 <div className="flex items-center gap-2 bg-accent/10 border border-accent/30 px-3 py-1.5 rounded shadow-[0_0_15px_rgba(255,193,44,0.05)] group cursor-help transition-all hover:border-accent">
                     <Zap className="w-3.5 h-3.5 text-accent fill-accent/20 animate-pulse" />
                     <div className="flex flex-col">
-                       <span className="text-[9px] font-heading font-black text-accent tracking-[0.1em] uppercase leading-none mb-0.5">TX SPEED</span>
+                       <span className="text-[9px] font-heading font-black text-accent tracking-[0.1em] uppercase leading-none mb-0.5">SETTLEMENT</span>
                        <span className="text-base font-mono font-black text-white leading-none">~4.8<span className="text-xs text-accent/80 ml-0.5">s</span></span>
                     </div>
                  </div>
@@ -296,9 +299,19 @@ export default function Wallet() {
                  <div className="flex items-center gap-2 bg-primary/10 border border-primary/30 px-3 py-1.5 rounded group hover:border-primary transition-all cursor-help">
                     <div className={`w-2 h-2 rounded-full ${blockchainStatus.txLatency && blockchainStatus.txLatency < 200 ? 'bg-green-500' : 'bg-yellow-500'}`} />
                     <div className="flex flex-col">
-                       <span className="text-[9px] font-heading font-black text-primary tracking-[0.1em] uppercase leading-none mb-0.5">LATENCY</span>
+                       <span className="text-[9px] font-heading font-black text-primary tracking-[0.1em] uppercase leading-none mb-0.5">ENGINE PULSE</span>
                        <span className="text-base font-mono font-black text-white leading-none">
                           {blockchainStatus.txLatency ? blockchainStatus.txLatency : "---"}<span className="text-xs text-primary/80 ml-0.5">ms</span>
+                       </span>
+                    </div>
+                 </div>
+
+                 <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 rounded group hover:border-blue-500 transition-all cursor-help">
+                    <Globe className={`w-3.5 h-3.5 ${networkLatency && networkLatency < 150 ? 'text-blue-400' : 'text-yellow-400'} animate-pulse`} />
+                    <div className="flex flex-col">
+                       <span className="text-[9px] font-heading font-black text-blue-400 tracking-[0.1em] uppercase leading-none mb-0.5">NETWORK PING</span>
+                       <span className="text-base font-mono font-black text-white leading-none">
+                          {networkLatency ? networkLatency : "---"}<span className="text-xs text-blue-400/80 ml-0.5">ms</span>
                        </span>
                     </div>
                  </div>
