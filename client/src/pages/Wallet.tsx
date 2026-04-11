@@ -280,21 +280,21 @@ export default function Wallet() {
                 <span className="text-[10px] font-mono text-muted-foreground bg-white/5 px-2 py-0.5 rounded border border-white/10 italic">Block #{blockchainStatus.blockNumber?.toLocaleString()}</span>
               </div>
               
-              <div className="flex flex-col sm:flex-row items-center gap-4 mt-2">
-                 <div className="flex items-center gap-3 bg-accent/10 border border-accent/30 px-6 py-3 rounded-lg shadow-[0_0_15px_rgba(255,193,44,0.05)] w-full sm:w-auto">
-                    <Zap className="w-4 h-4 text-accent fill-accent/20 animate-pulse" />
+              <div className="flex items-center gap-3 mt-4">
+                 <div className="flex items-center gap-2 bg-accent/10 border border-accent/30 px-3 py-1.5 rounded shadow-[0_0_15px_rgba(255,193,44,0.05)]">
+                    <Zap className="w-3.5 h-3.5 text-accent fill-accent/20 animate-pulse" />
                     <div className="flex flex-col">
-                       <span className="text-[10px] font-heading font-black text-accent tracking-[0.1em] uppercase leading-none mb-1">TX SPEED</span>
-                       <span className="text-xl font-mono font-black text-white leading-none">~4.8<span className="text-sm text-accent/80 ml-0.5">s</span></span>
+                       <span className="text-[9px] font-heading font-black text-accent tracking-[0.1em] uppercase leading-none mb-0.5">TX SPEED</span>
+                       <span className="text-base font-mono font-black text-white leading-none">~4.8<span className="text-xs text-accent/80 ml-0.5">s</span></span>
                     </div>
                  </div>
                  
-                 <div className="flex items-center gap-3 bg-primary/10 border border-primary/30 px-6 py-3 rounded-lg group hover:border-primary transition-all cursor-help w-full sm:w-auto">
-                    <div className={`w-2.5 h-2.5 rounded-full ${blockchainStatus.txLatency && blockchainStatus.txLatency < 200 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                 <div className="flex items-center gap-2 bg-primary/10 border border-primary/30 px-3 py-1.5 rounded group hover:border-primary transition-all cursor-help">
+                    <div className={`w-2 h-2 rounded-full ${blockchainStatus.txLatency && blockchainStatus.txLatency < 200 ? 'bg-green-500' : 'bg-yellow-500'}`} />
                     <div className="flex flex-col">
-                       <span className="text-[10px] font-heading font-black text-primary tracking-[0.1em] uppercase leading-none mb-1">TX LATENCY</span>
-                       <span className="text-xl font-mono font-black text-white leading-none">
-                          {blockchainStatus.txLatency ? blockchainStatus.txLatency : "---"}<span className="text-sm text-primary/80 ml-0.5">ms</span>
+                       <span className="text-[9px] font-heading font-black text-primary tracking-[0.1em] uppercase leading-none mb-0.5">LATENCY</span>
+                       <span className="text-base font-mono font-black text-white leading-none">
+                          {blockchainStatus.txLatency ? blockchainStatus.txLatency : "---"}<span className="text-xs text-primary/80 ml-0.5">ms</span>
                        </span>
                     </div>
                  </div>
@@ -377,18 +377,18 @@ export default function Wallet() {
                       {(user as any)?.alias || "NOT_SET"}
                    </div>
                  </div>
-                 <div className="flex flex-col items-end gap-2">
+                 <div className="flex items-center gap-2">
                     <Button
                       variant={(user as any)?.isAliasActive ? "default" : "outline"}
                       onClick={toggleAliasActive}
-                      className={`h-8 font-mono text-xs px-4 transition-all ${(user as any)?.isAliasActive ? 'bg-green-500 hover:bg-green-600 text-black border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'border-red-500/50 text-red-500 hover:text-red-400'}`}
+                      className={`h-6 font-mono text-[10px] px-3 transition-all ${(user as any)?.isAliasActive ? 'bg-green-500 hover:bg-green-600 text-black border-green-500 font-black' : 'border-red-500/50 text-red-500 hover:text-red-400'}`}
                     >
                       {(user as any)?.isAliasActive ? "ON" : "OFF"}
                     </Button>
                     {(user as any)?.isAliasActive ? (
-                      <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded border border-green-500/30 font-mono uppercase">ACTIVE</span>
+                      <span className="text-[10px] h-6 flex items-center bg-green-500/20 text-green-400 px-3 rounded border border-green-500/30 font-mono uppercase font-black">ACTIVE</span>
                     ) : (
-                      <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded border border-red-500/30 font-mono uppercase">INACTIVE</span>
+                      <span className="text-[10px] h-6 flex items-center bg-red-500/20 text-red-400 px-3 rounded border border-red-500/30 font-mono uppercase font-black">INACTIVE</span>
                     )}
                  </div>
                </div>
@@ -440,7 +440,7 @@ export default function Wallet() {
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="bg-input border-primary/30 font-mono text-3xl py-10 text-accent font-black"
+              className="bg-input border-primary/30 font-mono text-3xl py-10 text-accent font-black max-w-sm"
               placeholder="0.00"
               data-testid="input-amount"
             />

@@ -98,60 +98,63 @@ export default function Home() {
             </p>
 
             {/* HERITAGE & DESCRIPTION CONSOLIDATED */}
-            <div className="max-w-4xl mx-auto px-6 mb-6 mt-2 space-y-4">
+            <div className="max-w-4xl mx-auto px-6 mb-4 mt-2 space-y-4">
               <div className="flex flex-col items-center gap-2">
                  <div className="flex items-center gap-2 opacity-50">
                     <Globe className="w-4 h-4 text-accent" />
-                    <span className="text-[10px] font-mono text-accent uppercase tracking-[0.3em] font-black">Project Independence & Heritage</span>
+                    <span className="text-xs font-mono text-accent uppercase tracking-[0.3em] font-black">Project Independence & Heritage</span>
                  </div>
-                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-2xl mx-auto italic opacity-70">
-                   Note: Separate entity built to honor browser-native logic. 1:1 migration for V1 holders.
+                 <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto italic opacity-70">
+                   WDollar 2 is a separate entity and independent blockchain protocol built to honor the browser-native architecture of the original WebDollar project. 
+                   We are not affiliated with, endorsed by, or connected to webdollar.io. As a mark of respect, we are honoring a <strong>1:1 migration</strong> for all legitimate V1 holders.
                  </p>
               </div>
 
-              <p className="text-sm sm:text-base text-muted-foreground font-normal opacity-90 leading-relaxed max-w-3xl mx-auto">
-                  First-of-its-kind, browser-native blockchain with 5-second deterministic finality. 
-                  Zero-installation infrastructure for absolute decentralization.
+              <p className="text-sm sm:text-base md:text-lg text-muted-foreground font-normal opacity-90 leading-relaxed max-w-3xl mx-auto">
+                  First-of-its-kind, browser-native blockchain utilizing the high-throughput DIELBS consensus engine. 
+                  Zero-installation infrastructure with 5-second deterministic finality and native WebAssembly validation.
               </p>
             </div>
 
-            {/* EARLY ACCESS CARD PROMO - MORE COMPACT */}
+            {/* EARLY ACCESS CARD PROMO - ULTRA COMPACT */}
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="mb-8 w-full max-w-xl mx-auto group"
+              className="mb-8 w-full max-w-2xl mx-auto group"
             >
               <div className="relative p-[1px] rounded-lg bg-gradient-to-r from-accent via-yellow-400 to-accent animate-gradient">
-                <div className="bg-background/95 backdrop-blur-xl rounded-lg p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="bg-background/95 backdrop-blur-xl rounded-lg p-3 flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="flex-1 text-left">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-0.5">
                       <CreditCard className="w-4 h-4 text-accent" />
                       <span className="text-[10px] font-heading text-accent font-black tracking-widest uppercase">EARLY ACCESS</span>
                     </div>
-                    <h3 className="text-lg font-black text-white italic tracking-tighter">BE ONE OF THE FIRST 1,000</h3>
-                    <p className="text-[11px] font-mono text-primary/70">Receive <span className="text-accent font-bold">1,000 WEBD2</span> at launch.</p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-sm md:text-lg font-black text-white italic tracking-tighter uppercase">BE ONE OF THE FIRST 1,000</h3>
+                      <p className="text-[10px] font-mono text-primary/70">Reward: <span className="text-accent font-bold">1,000 WEBD2</span></p>
+                    </div>
                   </div>
                   
-                  <div className="flex-1 w-full max-w-xs">
+                  <div className="flex-1 w-full max-w-sm">
                     {waitlistStatus?.joined ? (
-                      <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 px-3 py-2 rounded-md">
+                      <div className="flex items-center justify-center gap-2 bg-green-500/10 border border-green-500/30 px-3 py-1.5 rounded-md w-full">
                         <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
-                        <span className="text-[10px] font-mono text-white/70">SECURED: #{waitlistStatus.position}</span>
+                        <span className="text-xs font-mono text-white/70">SECURED: POSITION #{waitlistStatus.position}</span>
                       </div>
                     ) : (
-                      <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex gap-2">
                         <Input
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder="Email..."
-                          className="h-9 bg-black/40 border-primary/20 font-mono text-xs"
+                          placeholder="Email address..."
+                          className="h-9 bg-black/40 border-primary/20 font-mono text-xs focus:border-accent/50"
                         />
                         <Button 
                           onClick={() => joinMutation.mutate(email)}
                           disabled={joinMutation.isPending || !email.includes("@")}
-                          className="h-9 btn-gold px-4 font-black uppercase text-[9px] shrink-0"
+                          className="h-9 btn-gold px-6 font-black uppercase text-[10px] shrink-0"
                         >
                           {joinMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "SECURE"}
                         </Button>
