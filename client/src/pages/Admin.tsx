@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { CheckCircle2, XCircle, Clock, Shield, Loader2, ExternalLink, Eye, CreditCard, Mail, Users, Search, UserCog, ShieldAlert, Rocket, Radio } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Shield, Loader2, ExternalLink, Eye, CreditCard, Mail, Users, Search, UserCog, ShieldAlert, Rocket, Activity } from "lucide-react";
 
 export default function Admin() {
   const [_, setLocation] = useLocation();
@@ -265,6 +265,7 @@ export default function Admin() {
             </div>
           )}
           <div className="text-[8px] text-muted-foreground mt-1 uppercase">5% Ecosystem Growth</div>
+        </div>
       </div>
 
       {/* LIVE P2P MESH MONITOR */}
@@ -299,7 +300,7 @@ export default function Admin() {
                       <tr key={p.id} className="hover:bg-green-500/5 transition-colors">
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
-                            <Radio className="w-3 h-3 text-green-400" />
+                            <Activity className="w-3 h-3 text-green-400" />
                             <span className="text-white font-bold">{p.id}</span>
                           </div>
                         </td>
