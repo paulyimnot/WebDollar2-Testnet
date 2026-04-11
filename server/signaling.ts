@@ -18,14 +18,19 @@ export function getLivePeerList(): Array<{ id: string; meshLinks: number; connec
 
 export function setupSignaling(server: any) {
   let nextId = 1;
+  const isBootstrap = process.env.NODE_IS_BOOTSTRAP === "true";
+  const staticId = process.env.BOOTSTRAP_PEER_ID || (isBootstrap ? "bootstrap-0" : null);
 
   const wss = new WebSocketServer({ server });
 
-  console.log("\n🟢 DIELBS Signaling Server successfully integrated into main process");
+  console.log(`\n🟢 DIELBS Signaling Server successfully integrated into main process`);
+  if (isBootstrap) {
+    console.log(`📡 MODE: OFFICIAL BOOTSTRAP NODE (ID: ${staticId})`);
+  }
   console.log("   Waiting for peer connections...\n");
 
   wss.on('connection', (ws) => {
-      const peerId = `peer-${nextId++}`;
+      const peerId = staticId && peers.size === 0 && isBootstrap ? staticId : `peer-${nextId++}`;
       peers.set(peerId, { ws, id: peerId, links: new Set(), connectedAt: Date.now() });
       console.log(`✦ Peer connected: ${peerId} (${peers.size} total)`);
 

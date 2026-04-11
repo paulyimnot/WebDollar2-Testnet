@@ -1849,6 +1849,17 @@ export async function registerRoutes(
     res.json({ isPaused: isBlockchainPaused, connectedPeers: getConnectedPeersCount() });
   });
 
+  app.get("/api/network/info", (req, res) => {
+    res.json({
+      name: "WebDollar 2 Bootstrap Node",
+      version: "1.0.0-testnet",
+      isBootstrap: process.env.NODE_IS_BOOTSTRAP === "true",
+      peerId: process.env.BOOTSTRAP_PEER_ID || (process.env.NODE_IS_BOOTSTRAP === "true" ? "bootstrap-0" : "anonymous"),
+      connectedPeers: getConnectedPeersCount(),
+      network: "testnet-dielbs-v1"
+    });
+  });
+
   app.get("/api/admin/peers/live", async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });

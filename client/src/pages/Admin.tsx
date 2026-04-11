@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { CheckCircle2, XCircle, Clock, Shield, Loader2, ExternalLink, Eye, CreditCard, Mail, Users, Search, UserCog, ShieldAlert, Rocket, Activity } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Shield, Loader2, ExternalLink, Eye, CreditCard, Mail, Users, Search, UserCog, ShieldAlert, Rocket, Activity, Globe, Server } from "lucide-react";
 
 export default function Admin() {
   const [_, setLocation] = useLocation();
@@ -78,6 +78,15 @@ export default function Admin() {
     enabled: !!user?.isDev,
     refetchInterval: 10000,
     placeholderData: (prev: any) => prev,
+  });
+
+  const { data: networkInfo } = useQuery<any>({
+    queryKey: ["/api/network/info"],
+    queryFn: async () => {
+      const res = await fetch("/api/network/info");
+      return await res.json();
+    },
+    refetchInterval: 30000,
   });
 
   const approveMutation = useMutation({
@@ -325,6 +334,46 @@ export default function Admin() {
           )}
         </div>
       </CyberCard>
+
+      {/* NETWORK INFRASTRUCTURE CONFIG */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <CyberCard title="NODE IDENTITY" className="border-primary/20 bg-primary/5 shadow-[0_0_15px_rgba(var(--primary),0.05)]">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Server className="w-4 h-4 text-primary" />
+                <span className="font-mono text-xs text-muted-foreground uppercase">Operating Mode</span>
+              </div>
+              <Badge className={networkInfo?.isBootstrap ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-primary/20 text-primary border-primary/30"}>
+                {networkInfo?.isBootstrap ? "BOOTSTRAP NODE" : "STANDARD NODE"}
+              </Badge>
+            </div>
+            
+            <div className="p-3 bg-black/40 border border-primary/10 rounded font-mono">
+              <div className="text-[10px] text-muted-foreground mb-1 uppercase tracking-tighter">Assigned Peer ID (Public)</div>
+              <div className="text-sm text-white font-black truncate">{networkInfo?.peerId || "INITIALIZING..."}</div>
+            </div>
+
+            <div className="text-[10px] font-mono text-muted-foreground italic">
+              * Bootstrap nodes use a static Peer ID to allow permanent federation links.
+            </div>
+          </div>
+        </CyberCard>
+
+        <CyberCard title="BOOTSTRAP INSTRUCTIONS" className="border-accent/20 bg-accent/5">
+          <div className="space-y-3 font-mono">
+            <p className="text-[10px] text-accent font-black uppercase tracking-widest">To activate permanent Bootstrap Mode:</p>
+            <div className="bg-black/60 p-3 rounded border border-accent/20 text-[10px] text-white">
+              <div className="text-accent/60 mb-1">SET ENV VARIABLES:</div>
+              NODE_IS_BOOTSTRAP=true<br/>
+              BOOTSTRAP_PEER_ID=wd2-main-01
+            </div>
+            <p className="text-[9px] text-muted-foreground leading-relaxed">
+              Once active, this computer will serve as a primary entry point for all mobile and browser peers on the {networkInfo?.network || "network"}.
+            </p>
+          </div>
+        </CyberCard>
+      </div>
 
       {(!treasury?.migration || treasury.migration.address === "NOT_FOUND") && (
         <CyberCard title="GENESIS INITIALIZATION" className="mb-8 border-yellow-500/50 shadow-[0_0_30px_rgba(255,193,44,0.1)]">
