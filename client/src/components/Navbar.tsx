@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Terminal, Cpu, RefreshCw, CreditCard, LogOut, Wallet, Menu, X, Coins, ShoppingCart, Shield, FileText, BookOpen, Rocket, Droplets } from "lucide-react";
+import { Terminal, Cpu, RefreshCw, CreditCard, LogOut, Wallet, Menu, X, Coins, ShoppingCart, Shield, FileText, BookOpen, Rocket, Droplets, Radio } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "./ui/button";
 import logoImg from "@assets/1771108919092_1771109065229.jpg";
 
@@ -10,6 +11,19 @@ export function Navbar() {
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
+  const { data: networkStats } = useQuery({
+    queryKey: ["/api/network/stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/network/stats");
+      if (!res.ok) throw new Error("Stats fetch failed");
+      return await res.json();
+    },
+    refetchInterval: 15000,
+    staleTime: 30000,
+    placeholderData: (prev: any) => prev,
+  });
+
+  const peerCount = networkStats?.connectedPeers || 0;
 
   const isActive = (path: string) => location === path;
 
@@ -36,7 +50,13 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* The inline navigation block is completely removed to favor the hamburger menu */}
+        {/* LIVE PEER INDICATOR */}
+        <div className="hidden sm:flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1 cursor-default" title={`${peerCount} active peers on the network`}>
+          <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          <Radio className="w-3 h-3 text-green-400/70" />
+          <span className="text-[10px] font-mono font-black text-green-400 tracking-wider">{peerCount}</span>
+          <span className="text-[9px] font-mono text-green-400/50 uppercase hidden md:inline">peers</span>
+        </div>
 
         <div className="flex items-center space-x-4">
           {user ? (
