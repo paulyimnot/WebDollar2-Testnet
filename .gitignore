@@ -8,3 +8,4 @@ server/dielbs_engine_pro.ts
 .env
 .ALCHEMY_API_KEY
 *.secret
+scratch/
