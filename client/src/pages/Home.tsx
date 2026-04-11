@@ -79,7 +79,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,193,44,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,193,44,0.03)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background"></div>
 
-        <div className="container relative z-10 px-4 text-center pt-24 md:pt-32">
+        <div className="container relative z-10 px-4 text-center pt-32 md:pt-48">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -100,10 +100,6 @@ export default function Home() {
             {/* HERITAGE & DESCRIPTION CONSOLIDATED */}
             <div className="max-w-4xl mx-auto px-6 mb-4 mt-2 space-y-4">
               <div className="flex flex-col items-center gap-2">
-                 <div className="flex items-center gap-2 opacity-50">
-                    <Globe className="w-4 h-4 text-accent" />
-                    <span className="text-xs font-mono text-accent uppercase tracking-[0.3em] font-black">Project Independence & Heritage</span>
-                 </div>
                  <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto italic opacity-70">
                    WDollar 2 is a separate entity and independent blockchain protocol built to honor the browser-native architecture of the original WebDollar project. 
                    We are not affiliated with, endorsed by, or connected to webdollar.io. As a mark of respect, we are honoring a <strong>1:1 migration</strong> for all legitimate V1 holders.

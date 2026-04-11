@@ -307,181 +307,6 @@ export default function Wallet() {
         </div>
       </div>
 
-      <div className="bg-accent/5 border border-accent/20 rounded-lg p-3 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_0_15px_rgba(255,193,44,0.05)]">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-accent/10 rounded-full">
-            <Zap className="w-4 h-4 text-accent" />
-          </div>
-          <div>
-            <div className="text-xs font-heading text-accent font-black tracking-wider uppercase">TESTNET FAUCET</div>
-            <div className="text-[10px] font-mono text-white/50 italic">Solve CPU Proof to claim 10,000 WD2 every 24 hours.</div>
-          </div>
-        </div>
-        <Button 
-          size="sm"
-          className="h-8 btn-gold px-4 text-[10px] font-black tracking-widest"
-          onClick={() => faucetMutation.mutate()}
-          disabled={faucetMutation.isPending}
-          data-testid="button-faucet-claim"
-        >
-          {faucetMutation.isPending ? (
-            <Loader2 className="w-3 h-3 animate-spin mr-2"/>
-          ) : (
-            <Zap className="w-3 h-3 mr-1.5" />
-          )}
-          {faucetMutation.isPending ? "MINING..." : "CLAIM 10k WD2"}
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <CyberCard title="WD2 ALIAS (IDENTITY)" className="h-full border-primary/30 bg-primary/5">
-          <div className="flex flex-col h-full justify-between p-4">
-            <div>
-              <h3 className="text-2xl font-heading text-primary mb-3 font-black tracking-wider">SET YOUR ALIAS</h3>
-              <p className="text-base font-mono text-white/70 leading-relaxed">Create a custom <strong className="text-primary font-bold">Sample@WEBD2</strong> to hide your long cryptographic address from others when receiving funds.</p>
-              <div className="text-[10px] font-mono text-muted-foreground mt-2 bg-primary/5 p-2 rounded border border-primary/10">
-                The <strong className="text-accent">@WEBD2</strong> suffix is mandatory and always <strong className="text-accent underline font-black">UPPERCASE</strong>. Your custom prefix remains case-sensitive. Usernames cannot be used as an alias for security reasons.
-              </div>
-            </div>
-            
-            <div className="mt-8 space-y-4">
-               <div className="flex items-center gap-2">
-                 <Input 
-                   value={customAlias}
-                   onChange={(e) => {
-                     // Auto-capitalize WEBD2 part only
-                     const val = e.target.value;
-                     if (val.toLowerCase().includes("@webd2")) {
-                        const parts = val.split("@");
-                        setCustomAlias(parts[0] + "@WEBD2");
-                     } else {
-                        setCustomAlias(val);
-                     }
-                   }}
-                   placeholder="Sample@WEBD2"
-                   className="font-mono bg-black/60 border-primary/30 h-10 text-base"
-                 />
-                 <Button 
-                   onClick={saveAlias} 
-                   disabled={isSavingAlias}
-                   className="h-10 btn-neon font-mono text-xs px-4"
-                 >
-                   {isSavingAlias ? <Loader2 className="w-4 h-4 animate-spin" /> : "SAVE"}
-                 </Button>
-               </div>
-               
-               <div className="bg-black/40 p-4 border border-primary/20 rounded-md flex flex-col sm:flex-row items-center justify-between gap-4 overflow-hidden">
-                 <div className="min-w-0 w-full">
-                   <div className="text-xs font-mono text-primary/70 mb-2 uppercase tracking-tighter">CURRENT ALIAS</div>
-                   <div className="text-xl md:text-2xl font-heading text-white break-all pr-2">
-                      {(user as any)?.alias || "NOT_SET"}
-                   </div>
-                 </div>
-                 <div className="flex items-center gap-2">
-                    <Button
-                      variant={(user as any)?.isAliasActive ? "default" : "outline"}
-                      onClick={toggleAliasActive}
-                      className={`h-6 font-mono text-[10px] px-3 transition-all ${(user as any)?.isAliasActive ? 'bg-green-500 hover:bg-green-600 text-black border-green-500 font-black' : 'border-red-500/50 text-red-500 hover:text-red-400'}`}
-                    >
-                      {(user as any)?.isAliasActive ? "ON" : "OFF"}
-                    </Button>
-                    {(user as any)?.isAliasActive ? (
-                      <span className="text-[10px] h-6 flex items-center bg-green-500/20 text-green-400 px-3 rounded border border-green-500/30 font-mono uppercase font-black">ACTIVE</span>
-                    ) : (
-                      <span className="text-[10px] h-6 flex items-center bg-red-500/20 text-red-400 px-3 rounded border border-red-500/30 font-mono uppercase font-black">INACTIVE</span>
-                    )}
-                 </div>
-               </div>
-            </div>
-          </div>
-        </CyberCard>
-      </div>
-
-      <CyberCard title="SEND WD2">
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex justify-between items-end mb-1">
-              <label className="text-xs font-mono text-primary/70">RECIPIENT ADDRESS OR ALIAS</label>
-            </div>
-            <Input
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              className="bg-input border-primary/30 font-mono py-8 text-lg"
-              placeholder="Enter Address or @Alias..."
-              data-testid="input-recipient"
-            />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between p-3 bg-card/40 border border-primary/10 rounded-t-md border-b-0 space-y-0">
-              <div className="space-y-0.5">
-                <div className="text-sm font-heading flex items-center gap-2">
-                  PRIVATE TRANSACTION
-                  {isPrivate && <span className="text-[10px] bg-accent/20 text-accent px-1.5 rounded-sm animate-pulse">ACTIVE</span>}
-                </div>
-                <div className="text-[10px] font-mono text-muted-foreground">MASKS SENDER & RECEIVER ADDRESSES</div>
-              </div>
-              <Button
-                variant={isPrivate ? "default" : "outline"}
-                onClick={() => setIsPrivate(!isPrivate)}
-                className={`h-8 font-mono text-xs transition-all ${isPrivate ? 'bg-accent hover:bg-accent/90 text-black border-accent shadow-[0_0_15px_rgba(255,193,44,0.3)]' : 'border-primary/20 text-muted-foreground'}`}
-              >
-                {isPrivate ? "ON" : "OFF"}
-              </Button>
-            </div>
-            <div className="bg-card/20 border border-primary/10 p-2 text-[10px] font-mono text-muted-foreground italic rounded-b-md">
-              When activated these transactions are truly secure and untraceable when absolute privacy is required.
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <label className="text-sm font-mono text-primary font-bold uppercase tracking-wider">AMOUNT (WD2)</label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="bg-input border-primary/30 font-mono text-3xl py-10 text-accent font-black max-w-sm"
-              placeholder="0.00"
-              data-testid="input-amount"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest flex items-center gap-2">
-              <KeyRound className="w-3 h-3 text-accent" /> Transaction Secret
-            </label>
-            <Input 
-              type="password" 
-              placeholder="Use your password to sign your transaction" 
-              value={txPassword}
-              onChange={(e) => setTxPassword(e.target.value)}
-              className="bg-input border-primary/20 font-mono py-6"
-            />
-            <p className="text-[10px] text-muted-foreground font-mono italic">
-              * Use your password to sign your transaction.
-            </p>
-          </div>
-          <Button
-            className={`w-full flex justify-between items-center group ${isPrivate ? 'btn-neon-filled border-accent' : 'btn-neon'}`}
-            disabled={isTransferring || isResolvingAlias || !amount || !recipient || !txPassword}
-            onClick={handleTransfer}
-            data-testid="button-transfer"
-          >
-            <span className="flex items-center gap-2">
-              {isTransferring || isResolvingAlias ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {isResolvingAlias ? "RESOLVING ALIAS..." : "BROADCASTING..."}
-                </>
-              ) : (
-                isPrivate ? "EXECUTE PRIVATE WD2 TRANSFER" : "EXECUTE WD2 TRANSFER"
-              )}
-            </span>
-            {!(isTransferring || isResolvingAlias) && <ArrowRight className="group-hover:translate-x-1 transition-transform" />}
-          </Button>
-        </div>
-      </CyberCard>
-
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-4">
         <h2 className="text-3xl font-heading text-accent border-l-4 border-accent pl-4" data-testid="text-addresses-title">WALLET ADDRESSES</h2>
         <Button
@@ -596,6 +421,180 @@ export default function Wallet() {
           </div>
         )}
       </div>
+
+      <div className="bg-accent/5 border border-accent/20 rounded-lg p-3 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_0_15px_rgba(255,193,44,0.05)]">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-accent/10 rounded-full">
+            <Zap className="w-4 h-4 text-accent" />
+          </div>
+          <div>
+            <div className="text-xs font-heading text-accent font-black tracking-wider uppercase">TESTNET FAUCET</div>
+            <div className="text-[10px] font-mono text-white/50 italic">Solve CPU Proof to claim 10,000 WD2 every 24 hours.</div>
+          </div>
+        </div>
+        <Button 
+          size="sm"
+          className="h-8 btn-gold px-4 text-[10px] font-black tracking-widest"
+          onClick={() => faucetMutation.mutate()}
+          disabled={faucetMutation.isPending}
+          data-testid="button-faucet-claim"
+        >
+          {faucetMutation.isPending ? (
+            <Loader2 className="w-3 h-3 animate-spin mr-2"/>
+          ) : (
+            <Zap className="w-3 h-3 mr-1.5" />
+          )}
+          {faucetMutation.isPending ? "MINING..." : "CLAIM 10k WD2"}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <CyberCard title="WD2 ALIAS (IDENTITY)" className="h-full border-primary/30 bg-primary/5">
+          <div className="flex flex-col h-full justify-between p-4">
+            <div>
+              <h3 className="text-2xl font-heading text-primary mb-3 font-black tracking-wider">SET YOUR ALIAS</h3>
+              <p className="text-base font-mono text-white/70 leading-relaxed">Create a custom <strong className="text-primary font-bold">Sample@WEBD2</strong> to hide your long cryptographic address from others when receiving funds.</p>
+              <div className="text-[10px] font-mono text-muted-foreground mt-2 bg-primary/5 p-2 rounded border border-primary/10">
+                The <strong className="text-accent">@WEBD2</strong> suffix is mandatory and always <strong className="text-accent underline font-black">UPPERCASE</strong>. Your custom prefix remains case-sensitive. Usernames cannot be used as an alias for security reasons.
+              </div>
+            </div>
+            
+            <div className="mt-8 space-y-4">
+               <div className="flex items-center gap-2">
+                 <Input 
+                   value={customAlias}
+                   onChange={(e) => {
+                     // Auto-capitalize WEBD2 part only
+                     const val = e.target.value;
+                     if (val.toLowerCase().includes("@webd2")) {
+                        const parts = val.split("@");
+                        setCustomAlias(parts[0] + "@WEBD2");
+                     } else {
+                        setCustomAlias(val);
+                     }
+                   }}
+                   placeholder="Sample@WEBD2"
+                   className="font-mono bg-black/60 border-primary/30 h-10 text-base"
+                 />
+                 <Button 
+                   onClick={saveAlias} 
+                   disabled={isSavingAlias}
+                   className="h-10 btn-neon font-mono text-xs px-4"
+                 >
+                   {isSavingAlias ? <Loader2 className="w-4 h-4 animate-spin" /> : "SAVE"}
+                 </Button>
+               </div>
+               
+               <div className="bg-black/40 p-4 border border-primary/20 rounded-md flex flex-col sm:flex-row items-center justify-between gap-4 overflow-hidden">
+                 <div className="min-w-0 w-full">
+                   <div className="text-xs font-mono text-primary/70 mb-2 uppercase tracking-tighter">CURRENT ALIAS</div>
+                   <div className="text-xl md:text-2xl font-heading text-white break-all pr-2">
+                      {(user as any)?.alias || "NOT_SET"}
+                   </div>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <Button
+                      variant={(user as any)?.isAliasActive ? "default" : "outline"}
+                      onClick={toggleAliasActive}
+                      className={`h-6 font-mono text-[10px] px-3 transition-all ${(user as any)?.isAliasActive ? 'bg-green-500 hover:bg-green-600 text-black border-green-500 font-black' : 'border-red-500/50 text-red-500 hover:text-red-400'}`}
+                    >
+                      {(user as any)?.isAliasActive ? "ON" : "OFF"}
+                    </Button>
+                    {(user as any)?.isAliasActive ? (
+                      <span className="text-[10px] h-6 flex items-center bg-green-500/20 text-green-400 px-3 rounded border border-green-500/30 font-mono uppercase font-black">ACTIVE</span>
+                    ) : (
+                      <span className="text-[10px] h-6 flex items-center bg-red-500/20 text-red-400 px-3 rounded border border-red-500/30 font-mono uppercase font-black">INACTIVE</span>
+                    )}
+                 </div>
+               </div>
+            </div>
+          </div>
+        </CyberCard>
+      </div>
+
+      <CyberCard title="SEND WD2" className="max-w-2xl mx-auto border-accent/20">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <div className="flex justify-between items-end mb-1">
+              <label className="text-xs font-mono text-primary/70">RECIPIENT ADDRESS OR ALIAS</label>
+            </div>
+            <Input
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              className="bg-input border-primary/30 font-mono py-8 text-lg"
+              placeholder="Enter Address or @Alias..."
+              data-testid="input-recipient"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between p-3 bg-card/40 border border-primary/10 rounded-md space-y-0">
+              <div className="space-y-0.5">
+                <div className="text-sm font-heading flex items-center gap-2">
+                  PRIVATE TRANSACTION
+                  {isPrivate && <span className="text-[10px] bg-accent/20 text-accent px-1.5 rounded-sm animate-pulse">ACTIVE</span>}
+                </div>
+                <div className="text-[10px] font-mono text-muted-foreground uppercase">MASKS IDENTITY</div>
+              </div>
+              <Button
+                variant={isPrivate ? "default" : "outline"}
+                onClick={() => setIsPrivate(!isPrivate)}
+                className={`h-8 font-mono text-xs transition-all ${isPrivate ? 'bg-accent hover:bg-accent/90 text-black border-accent' : 'border-primary/20 text-muted-foreground'}`}
+              >
+                {isPrivate ? "ON" : "OFF"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <label className="text-sm font-mono text-primary font-bold uppercase tracking-wider">AMOUNT (WD2)</label>
+            <Input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="bg-input border-primary/30 font-mono text-3xl py-10 text-accent font-black max-w-[280px]"
+              placeholder="0.00"
+              data-testid="input-amount"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest flex items-center gap-2">
+              <KeyRound className="w-3 h-3 text-accent" /> Transaction Secret
+            </label>
+            <Input 
+              type="password" 
+              placeholder="Use your password to sign your transaction" 
+              value={txPassword}
+              onChange={(e) => setTxPassword(e.target.value)}
+              className="bg-input border-primary/20 font-mono py-6"
+            />
+            <p className="text-[10px] text-muted-foreground font-mono italic">
+              * Use your password to sign your transaction.
+            </p>
+          </div>
+          <Button
+            className={`w-full flex justify-between items-center group ${isPrivate ? 'btn-neon-filled border-accent' : 'btn-neon'}`}
+            disabled={isTransferring || isResolvingAlias || !amount || !recipient || !txPassword}
+            onClick={handleTransfer}
+            data-testid="button-transfer"
+          >
+            <span className="flex items-center gap-2">
+              {isTransferring || isResolvingAlias ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {isResolvingAlias ? "RESOLVING ALIAS..." : "BROADCASTING..."}
+                </>
+              ) : (
+                isPrivate ? "EXECUTE PRIVATE WD2 TRANSFER" : "EXECUTE WD2 TRANSFER"
+              )}
+            </span>
+            {!(isTransferring || isResolvingAlias) && <ArrowRight className="group-hover:translate-x-1 transition-transform" />}
+          </Button>
+        </div>
+      </CyberCard>
+
+
 
       <TwoFactorSettings />
 
