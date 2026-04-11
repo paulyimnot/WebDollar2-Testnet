@@ -17,11 +17,11 @@ export function useAddresses() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (label?: string) => {
+    mutationFn: async ({ label, password }: { label?: string, password: string }) => {
       const res = await fetch(api.wallet.addresses.create.path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: label || "New Wallet" }),
+        body: JSON.stringify({ label: label || "New Wallet", password }),
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to create address");

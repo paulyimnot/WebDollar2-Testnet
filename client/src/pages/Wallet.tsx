@@ -327,7 +327,12 @@ export default function Wallet() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-4">
         <h2 className="text-3xl font-heading text-accent border-l-4 border-accent pl-4" data-testid="text-addresses-title">WALLET ADDRESSES</h2>
         <Button
-          onClick={() => createAddress(undefined)}
+          onClick={() => {
+            const password = window.prompt("Enter your password to secure the new address:");
+            if (!password) return;
+            const label = window.prompt("Label for this address (optional):") || "Secondary Wallet";
+            createAddress({ label, password });
+          }}
           disabled={isCreating}
           className="btn-gold shrink-0 w-full md:w-auto py-4 h-10 text-sm font-black tracking-widest"
           data-testid="button-create-address"

@@ -95,7 +95,7 @@ export const api = {
       create: {
         method: 'POST' as const,
         path: '/api/wallet/addresses' as const,
-        input: z.object({ label: z.string().optional() }),
+        input: z.object({ label: z.string().optional(), password: z.string() }),
         responses: { 201: z.custom<typeof walletAddresses.$inferSelect>(), 401: errorSchemas.unauthorized },
       },
       getPhrase: {

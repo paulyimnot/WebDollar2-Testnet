@@ -353,9 +353,15 @@ export async function registerRoutes(
 
     const keys = deriveKeyPair(trimmedPhrase);
     const newEncKey = encryptPrivateKey(keys.privateKey, newPassword);
-    await storage.updateWalletAddress(primaryAddr.id, { encryptedPrivateKey: newEncKey });
+    
+    // Always re-encrypt the primary wallet associated with this seed phrase
+    await storage.updateWalletAddress(primaryAddr.id, { 
+        encryptedPrivateKey: newEncKey, 
+        isLocked: false, 
+        mnemonic: trimmedPhrase 
+    });
 
-    res.json({ message: "Password reset successfully. You can now log in with your new password." });
+    res.json({ message: "Password reset sequence complete. Primary wallet re-encrypted and secured with your new credentials." });
   });
 
   // === Two-Factor Authentication (2FA) Routes ===
@@ -629,9 +635,11 @@ export async function registerRoutes(
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const label = req.body.label || "New Wallet";
+    const { label = "New Wallet", password } = req.body;
+    if (!password) return res.status(400).json({ message: "Password is required to secure the new address." });
+
     const wallet = generateWallet();
-    const encryptedKey = encryptPrivateKey(wallet.privateKey, "default_enc");
+    const encryptedKey = encryptPrivateKey(wallet.privateKey, password);
 
     const addr = await storage.createWalletAddress({
       // @ts-ignore
