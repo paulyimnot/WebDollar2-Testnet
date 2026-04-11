@@ -51,11 +51,10 @@ export function Navbar() {
         </Link>
 
         {/* LIVE PEER INDICATOR */}
-        <div className="hidden sm:flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1 cursor-default" title={`${peerCount} active peers on the network`}>
+        <div className="flex items-center gap-1 sm:gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-2 sm:px-3 py-1 cursor-default" title={`${peerCount} active peers on the network`}>
           <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-          <Radio className="w-3 h-3 text-green-400/70" />
           <span className="text-[10px] font-mono font-black text-green-400 tracking-wider">{peerCount}</span>
-          <span className="text-[9px] font-mono text-green-400/50 uppercase hidden md:inline">peers</span>
+          <span className="text-[9px] font-mono text-green-400/50 uppercase hidden sm:inline">peers</span>
         </div>
 
         <div className="flex items-center space-x-4">
