@@ -270,8 +270,20 @@ export async function registerRoutes(
   });
 
   app.post(api.auth.logout.path, (req, res) => {
-    req.session.destroy(() => {
-      res.json({ message: "Logged out" });
+    // 🛡️ SECURITY HARDENING: Explicitly delete the session cookie from the browser
+    res.clearCookie("wd2_session", {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax"
+    });
+
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Logout error (Session Destruction Failed):", err);
+        return res.status(500).json({ message: "Logout failed on server" });
+      }
+      res.json({ message: "Session terminated securely." });
     });
   });
 

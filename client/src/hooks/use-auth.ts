@@ -134,7 +134,8 @@ export function useAuth() {
       await fetch(api.auth.logout.path, { method: api.auth.logout.method, credentials: "include" });
     },
     onSuccess: () => {
-      queryClient.setQueryData([api.auth.me.path], null);
+      // 🛡️ SECURITY: Wipe total cache to prevent data leakage between sessions
+      queryClient.clear();
       toast({
         title: "DISCONNECTED",
         description: "Session terminated securely.",
