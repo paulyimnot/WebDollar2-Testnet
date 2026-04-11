@@ -103,8 +103,12 @@ function Router() {
   );
 }
 
+import { useP2P } from "@/hooks/use-p2p";
+
 function App() {
   const [isDuplicateTab, setIsDuplicateTab] = useState(false);
+  // 📡 Initialize P2P Mesh Networking
+  const { peerId, isConnected } = useP2P();
 
   useEffect(() => {
     try {
