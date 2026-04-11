@@ -50,6 +50,7 @@ export interface IStorage {
   getWalletNonce(address: string): Promise<number>;
   updateWalletBalance(address: string, amountChange: bigint, newNonce?: number): Promise<void>;
   getNetworkStats(): Promise<{ totalUsers: number; totalBlocks: number; totalTransactions: number; circulatingSupply: string; latestBlockTime: Date | null }>;
+  getTotalMinedSupply(): Promise<string>;
 
   updateUserPassword(userId: number, hashedPassword: string): Promise<User>;
   updateUser2FA(userId: number, totpSecret: string | null, is2faEnabled: boolean): Promise<User>;
@@ -398,6 +399,11 @@ export class DatabaseStorage implements IStorage {
     }).where(eq(walletAddresses.address, address));
   }
 
+  async getTotalMinedSupply(): Promise<string> {
+    const [result] = await db.select({ total: sql<string>`COALESCE(SUM(reward::numeric), 0)` }).from(blocks);
+    return result?.total || "0";
+  }
+
   async updateConversionStatus(id: number, status: string, amountApproved?: string): Promise<ConversionRequest> {
     const updateData: any = { status };
     if (amountApproved !== undefined) updateData.amountApproved = amountApproved;
@@ -409,11 +415,16 @@ export class DatabaseStorage implements IStorage {
     const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
     const [blockCount] = await db.select({ count: sql<number>`count(*)` }).from(blocks);
     const [txCount] = await db.select({ count: sql<number>`count(*)` }).from(transactions);
-    const blocksList = await db.select().from(blocks).orderBy(desc(blocks.id)).limit(1000);
-    const totalMined = blocksList.reduce((sum, b) => sum + parseFloat(b.reward || "0"), 0);
+    
+    // 🛡️ PERFORMANCE OPTIMIZATION: Use specialized supply aggregator
+    const totalMinedString = await this.getTotalMinedSupply();
+    const totalMined = parseFloat(totalMinedString);
+    
     const devAllocation = 6800000000;
     const foundationAllocation = 3400000000;
-    const latestBlock = blocksList[0] || null;
+    
+    const [latestBlock] = await db.select().from(blocks).orderBy(desc(blocks.id)).limit(1);
+    
     return {
       totalUsers: Number(userCount.count),
       totalBlocks: Number(blockCount.count),

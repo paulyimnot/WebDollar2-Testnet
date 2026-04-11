@@ -1280,8 +1280,8 @@ export async function registerRoutes(
     }
 
     const infoApy = calculateNetworkAPY(totalStakedNum, currentHeight);
-    const infoBlocksList = await storage.getBlocks(1000);
-    const infoTotalMined = infoBlocksList.reduce((sum: number, b: any) => sum + parseFloat(b.reward || "0"), 0);
+    const infoTotalMinedStr = await storage.getTotalMinedSupply();
+    const infoTotalMined = parseFloat(infoTotalMinedStr);
 
     // Calculate total rewards ever earned by this user using efficient aggregation
     const rewardStats = await storage.getUserRewardStats(user.id);
