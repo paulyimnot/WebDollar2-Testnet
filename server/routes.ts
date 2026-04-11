@@ -518,25 +518,31 @@ export async function registerRoutes(
   app.get('/api/alias/resolve/:username', async (req, res) => {
     const { username } = req.params;
     
-    // First try resolving by explicitly set active custom alias
-    let user = await storage.getUserByAlias(username);
+    // Step 1: Try resolving by custom alias first
+    const aliasUser = await storage.getUserByAlias(username);
     
-    // Fallback to legacy username resolution if not found via custom alias
-    // Wait, requirement: if alias functionality is active, username is disconnected from receiving?
-    // Actually, let's keep it simple: if you have an ACTIVE custom alias, we resolve that.
-    if (!user || !user.isAliasActive) {
-       // Only resolve by username if it doesn't match a custom active alias somewhere and if username lookup doesn't have custom alias overriding it?
-       // Let's just lookup by username as fallback for backward compatibility
-       user = await storage.getUserByUsername(username);
-       // If the user has a custom alias active, maybe we don't resolve username? 
-       // The user request says "for secutrity we should not allow user name to be same as alisa". 
-       // We'll allow routing to either their primary username or their active alias.
+    if (aliasUser && aliasUser.walletAddress) {
+      // Alias found — payment ALWAYS goes through regardless of active state
+      // The ON/OFF toggle only controls whether the alias name is publicly visible
+      return res.json({ 
+        address: aliasUser.walletAddress, 
+        username: aliasUser.isAliasActive ? (aliasUser.alias || aliasUser.username) : "Anonymous Wallet"
+      });
     }
-
-    if (!user || (!user.walletAddress && (!user.isAliasActive || user.alias !== username))) {
-      return res.status(404).json({ message: "Alias not found or has no primary address" });
+    
+    // Step 2: Fallback to username lookup (for users who haven't set a custom alias)
+    const userByName = await storage.getUserByUsername(username);
+    
+    if (!userByName || !userByName.walletAddress) {
+      return res.status(404).json({ message: "Alias or username not found on the network." });
     }
-    res.json({ address: user.walletAddress, username: user.alias || user.username });
+    
+    // Security: If this user HAS a custom alias set, don't allow resolution by raw username
+    if (userByName.alias && userByName.alias.length > 0) {
+      return res.status(404).json({ message: "This user has a custom alias configured. Please use their alias to send funds." });
+    }
+    
+    res.json({ address: userByName.walletAddress, username: userByName.username });
   });
 
   app.post('/api/alias/update', async (req, res) => {
