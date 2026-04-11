@@ -116,10 +116,14 @@ export default function Wallet() {
     queryKey: ["/api/blockchain/status"],
     queryFn: async () => {
       const res = await fetch("/api/blockchain/status");
-      if (!res.ok) return null;
+      if (!res.ok) throw new Error("Status fetch failed");
       return await res.json();
     },
     refetchInterval: 30000,
+    retry: 2,
+    retryDelay: 3000,
+    staleTime: 60000,
+    placeholderData: (prev: any) => prev,
   });
 
   const faucetMutation = useMutation({
