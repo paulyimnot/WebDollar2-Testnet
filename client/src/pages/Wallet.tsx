@@ -514,89 +514,91 @@ export default function Wallet() {
             </div>
           </div>
         </CyberCard>
+
+        <CyberCard title="SEND WD2" className="border-accent/20">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex justify-between items-end mb-1">
+                <label className="text-xs font-mono text-primary/70">RECIPIENT ADDRESS OR ALIAS</label>
+              </div>
+              <Input
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                className="bg-input border-primary/30 font-mono py-8 text-lg"
+                placeholder="Enter Address or @Alias..."
+                data-testid="input-recipient"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between p-3 bg-card/40 border border-primary/10 rounded-md space-y-0">
+                <div className="space-y-0.5">
+                  <div className="text-sm font-heading flex items-center gap-2">
+                    PRIVATE TRANSACTION
+                    {isPrivate && <span className="text-[10px] bg-accent/20 text-accent px-1.5 rounded-sm animate-pulse">ACTIVE</span>}
+                  </div>
+                  <div className="text-[10px] font-mono text-muted-foreground uppercase">MASKS IDENTITY</div>
+                </div>
+                <Button
+                  variant={isPrivate ? "default" : "outline"}
+                  onClick={() => setIsPrivate(!isPrivate)}
+                  className={`h-8 font-mono text-xs transition-all ${isPrivate ? 'bg-accent hover:bg-accent/90 text-black border-accent' : 'border-primary/20 text-muted-foreground'}`}
+                >
+                  {isPrivate ? "ON" : "OFF"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-sm font-mono text-primary font-bold uppercase tracking-wider">AMOUNT (WD2)</label>
+              <Input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="bg-input border-primary/30 font-mono text-3xl py-10 text-accent font-black max-w-[280px]"
+                placeholder="0.00"
+                data-testid="input-amount"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-mono text-primary/70 uppercase tracking-widest flex items-center gap-2">
+                <KeyRound className="w-3 h-3 text-accent" /> Transaction Secret
+              </label>
+              <Input 
+                type="password" 
+                placeholder="Use your password to sign your transaction" 
+                value={txPassword}
+                onChange={(e) => setTxPassword(e.target.value)}
+                className="bg-input border-primary/20 font-mono py-6"
+              />
+              <p className="text-[10px] text-muted-foreground font-mono italic">
+                * Use your password to sign your transaction.
+              </p>
+            </div>
+            <Button
+              className={`w-full flex justify-between items-center group ${isPrivate ? 'btn-neon-filled border-accent' : 'btn-neon'}`}
+              disabled={isTransferring || isResolvingAlias || !amount || !recipient || !txPassword}
+              onClick={handleTransfer}
+              data-testid="button-transfer"
+            >
+              <span className="flex items-center gap-2">
+                {isTransferring || isResolvingAlias ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {isResolvingAlias ? "RESOLVING ALIAS..." : "BROADCASTING..."}
+                  </>
+                ) : (
+                  isPrivate ? "EXECUTE PRIVATE WD2 TRANSFER" : "EXECUTE WD2 TRANSFER"
+                )}
+              </span>
+              {!(isTransferring || isResolvingAlias) && <ArrowRight className="group-hover:translate-x-1 transition-transform" />}
+            </Button>
+          </div>
+        </CyberCard>
       </div>
 
-      <CyberCard title="SEND WD2" className="max-w-2xl mx-auto border-accent/20">
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex justify-between items-end mb-1">
-              <label className="text-xs font-mono text-primary/70">RECIPIENT ADDRESS OR ALIAS</label>
-            </div>
-            <Input
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              className="bg-input border-primary/30 font-mono py-8 text-lg"
-              placeholder="Enter Address or @Alias..."
-              data-testid="input-recipient"
-            />
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between p-3 bg-card/40 border border-primary/10 rounded-md space-y-0">
-              <div className="space-y-0.5">
-                <div className="text-sm font-heading flex items-center gap-2">
-                  PRIVATE TRANSACTION
-                  {isPrivate && <span className="text-[10px] bg-accent/20 text-accent px-1.5 rounded-sm animate-pulse">ACTIVE</span>}
-                </div>
-                <div className="text-[10px] font-mono text-muted-foreground uppercase">MASKS IDENTITY</div>
-              </div>
-              <Button
-                variant={isPrivate ? "default" : "outline"}
-                onClick={() => setIsPrivate(!isPrivate)}
-                className={`h-8 font-mono text-xs transition-all ${isPrivate ? 'bg-accent hover:bg-accent/90 text-black border-accent' : 'border-primary/20 text-muted-foreground'}`}
-              >
-                {isPrivate ? "ON" : "OFF"}
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <label className="text-sm font-mono text-primary font-bold uppercase tracking-wider">AMOUNT (WD2)</label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="bg-input border-primary/30 font-mono text-3xl py-10 text-accent font-black max-w-[280px]"
-              placeholder="0.00"
-              data-testid="input-amount"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest flex items-center gap-2">
-              <KeyRound className="w-3 h-3 text-accent" /> Transaction Secret
-            </label>
-            <Input 
-              type="password" 
-              placeholder="Use your password to sign your transaction" 
-              value={txPassword}
-              onChange={(e) => setTxPassword(e.target.value)}
-              className="bg-input border-primary/20 font-mono py-6"
-            />
-            <p className="text-[10px] text-muted-foreground font-mono italic">
-              * Use your password to sign your transaction.
-            </p>
-          </div>
-          <Button
-            className={`w-full flex justify-between items-center group ${isPrivate ? 'btn-neon-filled border-accent' : 'btn-neon'}`}
-            disabled={isTransferring || isResolvingAlias || !amount || !recipient || !txPassword}
-            onClick={handleTransfer}
-            data-testid="button-transfer"
-          >
-            <span className="flex items-center gap-2">
-              {isTransferring || isResolvingAlias ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {isResolvingAlias ? "RESOLVING ALIAS..." : "BROADCASTING..."}
-                </>
-              ) : (
-                isPrivate ? "EXECUTE PRIVATE WD2 TRANSFER" : "EXECUTE WD2 TRANSFER"
-              )}
-            </span>
-            {!(isTransferring || isResolvingAlias) && <ArrowRight className="group-hover:translate-x-1 transition-transform" />}
-          </Button>
-        </div>
-      </CyberCard>
 
 
 
