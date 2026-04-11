@@ -23,7 +23,7 @@ import { getConnectedPeersCount, getLivePeerList } from "./signaling.js";
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const faucetIpStamps = new Map<string, number>();
 export let isBlockchainPaused = false;
-let lastTxLatency = 142; // ms, default baseline
+let lastTxLatency = 12; // ms, default high-performance baseline
 
 function rateLimit(key: string, maxAttempts: number, windowMs: number): boolean {
   const now = Date.now();
