@@ -74,6 +74,8 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   private cachedSupply: { value: string; timestamp: number } | null = null;
   private SUPPLY_CACHE_TTL = 60000; // 60 seconds
+  private cachedLatestBlock: { value: Block | undefined; timestamp: number } | null = null;
+  private BLOCK_CACHE_TTL = 2000; // 2 seconds
 
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -175,7 +177,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestBlock(): Promise<Block | undefined> {
+    const now = Date.now();
+    if (this.cachedLatestBlock && (now - this.cachedLatestBlock.timestamp < this.BLOCK_CACHE_TTL)) {
+      return this.cachedLatestBlock.value;
+    }
+
     const [block] = await db.select().from(blocks).orderBy(desc(blocks.id)).limit(1);
+    this.cachedLatestBlock = { value: block, timestamp: now };
     return block;
   }
 
