@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
 
-const peers = new Map<string, { ws: WebSocket; id: string; links: Set<string>; connectedAt: number }>();
+const peers = new Map<string, { ws: WebSocket; id: string; links: Set<string>; connectedAt: number; isBackbone?: boolean }>();
 
 export function getConnectedPeersCount(): number {
   return peers.size;
@@ -13,6 +13,7 @@ export function getLivePeerList(): Array<{ id: string; meshLinks: number; connec
     meshLinks: p.links.size,
     connectedAt: p.connectedAt,
     uptimeMs: now - p.connectedAt,
+    isBackbone: !!p.isBackbone,
   }));
 }
 

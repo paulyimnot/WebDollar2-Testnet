@@ -5,17 +5,31 @@ export function useP2P() {
   const [neighbors, setNeighbors] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [connectAttempt, setConnectAttempt] = useState(0);
+  const [isBackbone, setIsBackbone] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
+
+  const toggleBackbone = () => {
+    const newState = !isBackbone;
+    setIsBackbone(newState);
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      if (newState) {
+        socketRef.current.send(JSON.stringify({ type: 'declare_backbone' }));
+      }
+    }
+  };
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
-    // Explicit /ws path to avoid conflict with Express catch-all
     const socket = new WebSocket(`${protocol}//${host}/ws`);
 
     socket.onopen = () => {
       console.log("📡 Connected to WebDollar 2 Signaling Server");
       setIsConnected(true);
+      // Re-declare backbone status if it was active before reconnection
+      if (isBackbone) {
+        socket.send(JSON.stringify({ type: 'declare_backbone' }));
+      }
     };
 
     socket.onmessage = (event) => {
@@ -39,23 +53,16 @@ export function useP2P() {
     };
 
     socket.onclose = () => {
-      console.log("📡 Disconnected from Signaling Server. Retrying in 5s...");
       setIsConnected(false);
       setPeerId(null);
       setNeighbors([]);
-      
-      // Attempt reconnection by bumping state
-      setTimeout(() => {
-        setConnectAttempt(prev => prev + 1);
-      }, 5000);
+      setTimeout(() => setConnectAttempt(prev => prev + 1), 5000);
     };
 
     socketRef.current = socket;
 
-    return () => {
-      socket.close();
-    };
+    return () => socket.close();
   }, [connectAttempt]);
 
-  return { peerId, neighbors, isConnected };
+  return { peerId, neighbors, isConnected, isBackbone, toggleBackbone };
 }

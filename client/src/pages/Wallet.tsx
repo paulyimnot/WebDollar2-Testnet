@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useWallet } from "@/hooks/use-wallet";
 import { useStaking } from "@/hooks/use-staking";
 import { useAddresses } from "@/hooks/use-addresses";
+import { useP2P } from "@/hooks/use-p2p";
 import { CyberCard } from "@/components/CyberCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,29 @@ export default function Wallet() {
   const [customAlias, setCustomAlias] = useState("");
   const [isSavingAlias, setIsSavingAlias] = useState(false);
   const [networkLatency, setNetworkLatency] = useState<number | null>(null);
+
+  // 📡 P2P Backend backbone logic
+  const { isBackbone, toggleBackbone, isConnected: isP2PConnected } = useP2P();
+  const [wakeLock, setWakeLock] = useState<any>(null);
+
+  // Wake Lock Logic for Backbone Mode
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      try {
+        if (isBackbone && (navigator as any).wakeLock) {
+          const lock = await (navigator as any).wakeLock.request('screen');
+          setWakeLock(lock);
+          console.log("🔒 Screen Wake Lock Active - BACKBONE MODE");
+        } else if (!isBackbone && wakeLock) {
+           wakeLock.release().then(() => setWakeLock(null));
+        }
+      } catch (err) {
+        console.warn("Wake Lock failed:", err);
+      }
+    };
+    requestWakeLock();
+    return () => { if (wakeLock) wakeLock.release(); };
+  }, [isBackbone]);
 
   // Measure Latency
   useEffect(() => {
@@ -251,6 +275,16 @@ export default function Wallet() {
               </button>
               <button onClick={() => setShowQR(!showQR)} className="p-3 bg-accent/10 rounded-md text-accent hover:text-white transition-colors" data-testid="button-show-qr">
                 <QrCode className="w-6 h-6" />
+              </button>
+              
+              {/* BACKBONE MODE TOGGLE */}
+              <button 
+                onClick={toggleBackbone} 
+                className={`flex items-center gap-2 px-4 py-3 rounded-md font-heading font-black text-sm transition-all border-2 ${isBackbone ? 'bg-red-500/10 border-red-500 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-pulse' : 'bg-primary/5 border-primary/20 text-primary/60 hover:border-primary/50'}`}
+                title={isBackbone ? "Backbone Mode is ACTIVE. Your computer is serving as a network pillar." : "Elevate this computer to a Backbone Node (Recommended for 24/7 devices)"}
+              >
+                <Zap className={`w-4 h-4 ${isBackbone ? 'fill-current' : ''}`} />
+                {isBackbone ? "BACKBONE ACTIVE" : "BACKBONE MODE"}
               </button>
             </div>
           </div>
