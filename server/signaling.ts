@@ -16,18 +16,30 @@ export function getLivePeerList(): Array<{ id: string; meshLinks: number; connec
   }));
 }
 
-export function setupSignaling(server: any) {
+export function setupSignaling(server: any, app: any, storage: any) {
   let nextId = 1;
   const isBootstrap = process.env.NODE_IS_BOOTSTRAP === "true";
   const staticId = process.env.BOOTSTRAP_PEER_ID || (isBootstrap ? "bootstrap-0" : null);
 
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocketServer({ server, path: "/ws" });
 
   console.log(`\n🟢 DIELBS Signaling Server successfully integrated into main process`);
   if (isBootstrap) {
     console.log(`📡 MODE: OFFICIAL BOOTSTRAP NODE (ID: ${staticId})`);
   }
   console.log("   Waiting for peer connections...\n");
+
+  app.get("/api/staking/network", async (_req: any, res: any) => {
+    try {
+      const stats = await storage.getNetworkStats();
+      res.json({
+        ...stats,
+        connectedPeers: getConnectedPeersCount(),
+      });
+    } catch(err) {
+      res.status(500).json({ message: "Failed to fetch network stats" });
+    }
+  });
 
   wss.on('connection', (ws) => {
       const peerId = staticId && peers.size === 0 && isBootstrap ? staticId : `peer-${nextId++}`;

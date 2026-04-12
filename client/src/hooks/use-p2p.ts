@@ -4,12 +4,14 @@ export function useP2P() {
   const [peerId, setPeerId] = useState<string | null>(null);
   const [neighbors, setNeighbors] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectAttempt, setConnectAttempt] = useState(0);
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
-    const socket = new WebSocket(`${protocol}//${host}`);
+    // Explicit /ws path to avoid conflict with Express catch-all
+    const socket = new WebSocket(`${protocol}//${host}/ws`);
 
     socket.onopen = () => {
       console.log("📡 Connected to WebDollar 2 Signaling Server");
@@ -37,14 +39,14 @@ export function useP2P() {
     };
 
     socket.onclose = () => {
-      console.log("📡 Disconnected from Signaling Server");
+      console.log("📡 Disconnected from Signaling Server. Retrying in 5s...");
       setIsConnected(false);
       setPeerId(null);
       setNeighbors([]);
       
-      // Attempt reconnection after 5s
+      // Attempt reconnection by bumping state
       setTimeout(() => {
-        setIsConnected(false);
+        setConnectAttempt(prev => prev + 1);
       }, 5000);
     };
 
@@ -53,7 +55,7 @@ export function useP2P() {
     return () => {
       socket.close();
     };
-  }, []);
+  }, [connectAttempt]);
 
   return { peerId, neighbors, isConnected };
 }

@@ -224,7 +224,8 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || "5000", 10);
   
   // Attach unified DIELBS signaling server to the identical HTTP port
-  setupSignaling(httpServer);
+  const { storage } = await import("./storage.js");
+  setupSignaling(httpServer, app, storage);
   
   httpServer.on("error", (err) => {
     console.error("FATAL PORT ERROR:", err);
