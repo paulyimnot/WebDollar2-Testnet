@@ -49,7 +49,7 @@ app.use(compression());
 // 🚫 SPAM PROTECTION (Global)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
-  max: 300, // Public Testnet: 300 requests per 15 minutes per IP
+  max: 2000, // High-performance testnet: 2000 requests per 15 minutes per IP
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests from this IP. Please slow down and try again in a few minutes." }
@@ -58,7 +58,7 @@ const globalLimiter = rateLimit({
 // Apply stricter limits to Auth/Faucet
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, 
-  max: 15, // Public Testnet: Max 15 auth attempts per hour per IP
+  max: 50, // Max 50 auth attempts per hour per IP
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many login/registration attempts. Please wait before trying again." }
@@ -66,7 +66,7 @@ const authLimiter = rateLimit({
 
 const financialLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, 
-  max: 10, // Max 10 transfers per minute
+  max: 100, // Allow 100 transfers per minute for heavy testing
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Security: Transfer frequency limit reached. Please wait 60 seconds." }
