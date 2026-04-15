@@ -306,8 +306,8 @@ export default function Wallet() {
                   <Zap className={`w-4 h-4 ${isBackbone ? 'fill-current' : ''}`} />
                   {isBackbone ? "BACKBONE ACTIVE" : "BACKBONE MODE"}
                 </button>
-                <p className="hidden sm:block text-[10px] font-mono text-muted-foreground/60 italic max-w-[180px] leading-snug border-l border-primary/20 pl-3">
-                  {isBackbone ? "Network Pillar Active: Your device is bypassing sleep to stabilize the global mesh." : "Turn on to prevent device sleep and prioritize your node for the P2P network."}
+                <p className="hidden sm:block text-[10px] font-mono text-muted-foreground/60 italic max-w-[200px] leading-snug border-l border-primary/20 pl-3">
+                  {isBackbone ? "Network Pillar Active: Bypassing sleep (10% Mining Bonus Applied)." : "Turn on to prevent device sleep and earn 10% extra mining rewards."}
                 </p>
                </div>
             </div>
