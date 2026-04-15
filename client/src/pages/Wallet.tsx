@@ -189,7 +189,7 @@ export default function Wallet() {
         }
         const data = await res.json();
         finalRecipient = data.address;
-        toast({ title: "ALIAS RESOLVED", description: `Sending to @${data.username} (${finalRecipient.substring(0, 12)}...)`, className: "font-mono border-accent/30 text-accent/80" });
+        toast({ title: "ALIAS RESOLVED", description: `Sending to ${data.username} (${finalRecipient.substring(0, 12)}...)`, className: "font-mono border-accent/30 text-accent/80" });
       } catch (e: any) {
         setIsResolvingAlias(false);
         toast({ title: "ALIAS ERROR", description: e.message || "Username/Alias not found or has no active wallet.", variant: "destructive", className: "font-mono" });
