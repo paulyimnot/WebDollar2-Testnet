@@ -108,7 +108,49 @@ import { useP2P } from "@/hooks/use-p2p";
 function App() {
   const [isDuplicateTab, setIsDuplicateTab] = useState(false);
   // 📡 Initialize P2P Mesh Networking
-  const { peerId, isConnected } = useP2P();
+  const { peerId, isConnected, isBackbone } = useP2P();
+  const { user } = useAuth();
+  const [wakeLock, setWakeLock] = useState<any>(null);
+
+  // 📡 Global Heartbeat for Mining Rewards & Backbone Status
+  useEffect(() => {
+    if (!user) return;
+    
+    const sendHeartbeat = async () => {
+      try {
+        await fetch("/api/user/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isBackbone }),
+        });
+      } catch (e) {
+        console.warn("Heartbeat failed", e);
+      }
+    };
+    
+    sendHeartbeat(); // Immediate sync
+    const interval = setInterval(sendHeartbeat, 30000);
+    return () => clearInterval(interval);
+  }, [user, isBackbone]);
+
+  // 🔒 Global Wake Lock Logic for Backbone Mode
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      try {
+        if (isBackbone && (navigator as any).wakeLock) {
+          const lock = await (navigator as any).wakeLock.request('screen');
+          setWakeLock(lock);
+          console.log("🔒 Global Screen Wake Lock Active - BACKBONE MODE");
+        } else if (!isBackbone && wakeLock) {
+           wakeLock.release().then(() => setWakeLock(null));
+        }
+      } catch (err) {
+        console.warn("Wake Lock failed:", err);
+      }
+    };
+    requestWakeLock();
+    return () => { if (wakeLock) wakeLock.release(); };
+  }, [isBackbone]);
 
   useEffect(() => {
     try {

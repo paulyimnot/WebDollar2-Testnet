@@ -42,28 +42,8 @@ export default function Wallet() {
 
   // 📡 P2P Backend backbone logic
   const { isBackbone, toggleBackbone, isConnected: isP2PConnected } = useP2P();
-  const [wakeLock, setWakeLock] = useState<any>(null);
 
-  // Wake Lock Logic for Backbone Mode
-  useEffect(() => {
-    const requestWakeLock = async () => {
-      try {
-        if (isBackbone && (navigator as any).wakeLock) {
-          const lock = await (navigator as any).wakeLock.request('screen');
-          setWakeLock(lock);
-          console.log("🔒 Screen Wake Lock Active - BACKBONE MODE");
-        } else if (!isBackbone && wakeLock) {
-           wakeLock.release().then(() => setWakeLock(null));
-        }
-      } catch (err) {
-        console.warn("Wake Lock failed:", err);
-      }
-    };
-    requestWakeLock();
-    return () => { if (wakeLock) wakeLock.release(); };
-  }, [isBackbone]);
-
-  // Measure Latency
+  // Measure Latency (Visual Only)
   useEffect(() => {
     const measureLatency = async () => {
         const start = performance.now();
@@ -79,27 +59,6 @@ export default function Wallet() {
     const interval = setInterval(measureLatency, 10000);
     return () => clearInterval(interval);
   }, []);
-
-  // 📡 Heartbeat for Mining Rewards & Backbone Status
-  useEffect(() => {
-    if (!user) return;
-    
-    const sendHeartbeat = async () => {
-      try {
-        await fetch("/api/user/heartbeat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isBackbone }),
-        });
-      } catch (e) {
-        console.warn("Heartbeat failed", e);
-      }
-    };
-    
-    sendHeartbeat(); // Immediate sync
-    const interval = setInterval(sendHeartbeat, 30000);
-    return () => clearInterval(interval);
-  }, [user, isBackbone]);
 
   const saveAlias = async () => {
     if (!customAlias.trim()) return;

@@ -5,12 +5,15 @@ export function useP2P() {
   const [neighbors, setNeighbors] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [connectAttempt, setConnectAttempt] = useState(0);
-  const [isBackbone, setIsBackbone] = useState(false);
+  const [isBackbone, setIsBackbone] = useState(() => {
+    return localStorage.getItem("wd2_is_backbone") === "true";
+  });
   const socketRef = useRef<WebSocket | null>(null);
 
   const toggleBackbone = () => {
     const newState = !isBackbone;
     setIsBackbone(newState);
+    localStorage.setItem("wd2_is_backbone", newState.toString());
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       if (newState) {
         socketRef.current.send(JSON.stringify({ type: 'declare_backbone' }));
