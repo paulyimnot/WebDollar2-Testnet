@@ -322,7 +322,7 @@ export default function Wallet() {
                      <div className="flex flex-col">
                         <span className="text-[9px] font-heading font-black text-red-400 tracking-[0.1em] uppercase leading-none mb-0.5">WEBMESH STATUS</span>
                         <span className="text-base font-mono font-black text-white leading-none">
-                           {isBackbone ? "BACKBONE" : "FEDERATED"}
+                           {isBackbone ? "BACKBONE" : "INACTIVE"}
                         </span>
                      </div>
                   </div>
