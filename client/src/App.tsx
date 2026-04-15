@@ -7,6 +7,7 @@ import { Footer } from "@/components/Footer";
 import { HelpChat } from "@/components/HelpChat";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
+import { useP2P } from "@/hooks/use-p2p";
 
 import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
@@ -103,12 +104,8 @@ function Router() {
   );
 }
 
-import { useP2P } from "@/hooks/use-p2p";
-
-function App() {
-  const [isDuplicateTab, setIsDuplicateTab] = useState(false);
-  // 📡 Initialize P2P Mesh Networking
-  const { peerId, isConnected, isBackbone } = useP2P();
+function BackboneManager() {
+  const { isBackbone } = useP2P();
   const { user } = useAuth();
   const [wakeLock, setWakeLock] = useState<any>(null);
 
@@ -152,26 +149,32 @@ function App() {
     return () => { if (wakeLock) wakeLock.release(); };
   }, [isBackbone]);
 
+  return null;
+}
+
+function App() {
+  const [isDuplicateTab, setIsDuplicateTab] = useState(false);
+  
+  // 📡 Initialize P2P Mesh Networking - call inside App so it's top-level
+  useP2P();
+
   useEffect(() => {
     try {
       const channel = new BroadcastChannel('webdollar2_tab_lock');
       
-      // Ping network immediately to ask if any brother tab is currently handling processing
       channel.postMessage({ type: 'CHECK_ACTIVE_TABS' });
       
       channel.onmessage = (event) => {
         if (event.data.type === 'CHECK_ACTIVE_TABS') {
-          // A new tab just opened! Shut it down by declaring supreme execution privilege
           if(!isDuplicateTab) channel.postMessage({ type: 'I_AM_ACTIVE' });
         } else if (event.data.type === 'I_AM_ACTIVE') {
-          // If we receive the dominant beacon from a pre-existing tab, surrender and kill render loop
           setIsDuplicateTab(true);
         }
       };
 
       return () => channel.close();
     } catch (e) {
-      console.warn("Broadcast channel inherently unvailable (Old browser), disregarding strict-tab policy.");
+      console.warn("Tab lock failed:", e);
     }
   }, [isDuplicateTab]);
 
@@ -181,8 +184,7 @@ function App() {
         <h1 className="text-4xl md:text-6xl font-black mb-6 tracking-widest font-heading drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]">⚠️ TAB LOCKED</h1>
         <p className="text-lg md:text-2xl text-white max-w-2xl font-bold">Only <strong className="text-accent underline text-3xl">ONE</strong> active WebDollar 2 Wallet is permitted per device!</p>
         <p className="text-sm md:text-base mt-6 text-red-400 bg-red-900/20 px-6 py-4 rounded-lg border border-red-500/30">
-          Strict Security Mode: This restriction prevents race conditions in the browser-native DIELBS consensus engine and ensures your cryptographic keys are isolated to a single execution context.<br/>
-          <strong>Please close this tab and return to your original active session!</strong>
+          Please close this tab and return to your original active session!
         </p>
       </div>
     );
@@ -190,6 +192,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <BackboneManager />
       <Toaster />
       <Router />
       <HelpChat />
