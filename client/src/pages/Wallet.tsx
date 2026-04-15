@@ -278,14 +278,19 @@ export default function Wallet() {
               </button>
               
               {/* BACKBONE MODE TOGGLE */}
-              <button 
-                onClick={toggleBackbone} 
-                className={`flex items-center gap-2 px-4 py-3 rounded-md font-heading font-black text-sm transition-all border-2 ${isBackbone ? 'bg-red-500/10 border-red-500 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-pulse' : 'bg-primary/5 border-primary/20 text-primary/60 hover:border-primary/50'}`}
-                title={isBackbone ? "Backbone Mode is ACTIVE. Your computer is serving as a network pillar." : "Elevate this computer to a Backbone Node (Recommended for 24/7 devices)"}
-              >
-                <Zap className={`w-4 h-4 ${isBackbone ? 'fill-current' : ''}`} />
-                {isBackbone ? "BACKBONE ACTIVE" : "BACKBONE MODE"}
-              </button>
+               <div className="flex flex-col gap-1">
+                <button 
+                  onClick={toggleBackbone} 
+                  className={`flex items-center gap-2 px-4 py-3 rounded-md font-heading font-black text-sm transition-all border-2 ${isBackbone ? 'bg-red-500/10 border-red-500 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-pulse' : 'bg-primary/5 border-primary/20 text-primary/60 hover:border-primary/50'}`}
+                  title={isBackbone ? "Backbone Mode is ACTIVE. Your computer is serving as a network pillar." : "Elevate this computer to a Backbone Node (Recommended for 24/7 devices)"}
+                >
+                  <Zap className={`w-4 h-4 ${isBackbone ? 'fill-current' : ''}`} />
+                  {isBackbone ? "BACKBONE ACTIVE" : "BACKBONE MODE"}
+                </button>
+                <p className="text-[9px] font-mono text-muted-foreground/50 italic max-w-[140px] leading-tight">
+                  {isBackbone ? "Stay-awake mining active. Contributing to global mesh." : "Enable to bypass device sleep & prioritize P2P links."}
+                </p>
+               </div>
             </div>
           </div>
           {showQR && wallet?.walletAddress && (
