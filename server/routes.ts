@@ -1151,9 +1151,9 @@ export async function registerRoutes(
   // === Proof-of-Stake Staking Routes ===
 
   // === Proof-of-Stake Staking Routes (100-Year Halving Model) ===
-  const TOTAL_MINING_SUPPLY = 43600000000; // Total to be mined over 100 years
-  const BLOCKS_PER_ERA = 18934560; // Exactly 3 years at 5s blocks
-  const INITIAL_ERA_REWARD = 1151.32; // Starting reward to reach 43.6B through halvings
+  const TOTAL_MINING_SUPPLY = 43200000000; // Total to be mined over 100 years
+  const BLOCKS_PER_ERA = 18921600; // Exactly 3 standard years (365 days) at 5s blocks
+  const INITIAL_ERA_REWARD = 1141.55; // Starting reward to reach exactly 43.2B through halvings over 100 years
   const REWARD_INTERVAL_SECONDS = 5;
   const MIN_STAKE_AMOUNT = 1000;
 
@@ -2434,8 +2434,8 @@ export async function registerRoutes(
 
 Key facts you know:
 - WebDollar 2 is a cryptocurrency with the ticker WEBD. Price is approximately $0.00096300 per WEBD.
-- Total supply: 68 billion WEBD tokens. Distribution: 85% public mining (57.8B), 10% dev allocation (6.8B), 5% foundation (3.4B).
-- Mining uses Proof-of-Stake (PoS). Users stake WEBD tokens and earn passive rewards. Base rate: 1,526.32 WEBD distributed every 5 seconds (halving every 3 years), designed for a 100-year supply duration.
+- Total supply: 50.8 billion WEBD tokens. Distribution: 85% public mining (43.2B), 10% dev allocation (5.1B), 5% foundation (2.5B).
+- Mining uses Proof-of-Stake (PoS). Users stake WEBD tokens and earn passive rewards. Base rate: 1,140.77 WEBD distributed every 5 seconds (halving every 3 years), designed for a 100-year supply duration.
 - Minimum stake: 1,000 WEBD. Rewards are auto-deposited every 5 seconds. APY varies based on total network stake.
 - Each wallet generates a 12-word BIP39 seed phrase, a WEBD$ address, and a Polygon-compatible 0x address from the same private key using secp256k1 cryptography.
 - Users can create multiple addresses under one account from the Addresses page. Each address has its own balance and can be locked for security.
