@@ -7,7 +7,7 @@ import { useP2P } from "@/hooks/use-p2p";
 import { CyberCard } from "@/components/CyberCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Wallet as WalletIcon, Send, Loader2, Copy, Check, Globe, ExternalLink, QrCode, X, Plus, Lock, Unlock, Trash2, Eye, EyeOff, KeyRound, Zap } from "lucide-react";
+import { ArrowRight, Wallet as WalletIcon, Send, Loader2, Copy, Check, Globe, ExternalLink, QrCode, X, Plus, Lock, Unlock, Trash2, Eye, EyeOff, KeyRound, Zap, ShieldCheck } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
