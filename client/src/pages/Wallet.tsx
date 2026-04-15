@@ -422,8 +422,24 @@ export default function Wallet() {
         <CyberCard title="WD2 ALIAS (IDENTITY)" className="h-full border-primary/30 bg-primary/5">
           <div className="flex flex-col h-full justify-between p-4">
             <div>
-              <h3 className="text-2xl font-heading text-primary mb-3 font-black tracking-wider">SET YOUR ALIAS</h3>
-              <p className="text-base font-mono text-white/70 leading-relaxed">Create a custom ALIAS to hide your address.</p>
+              <h3 className="text-2xl font-heading text-primary mb-1 font-black tracking-wider">SET YOUR ALIAS</h3>
+              <p className="text-xs font-mono text-white/50 mb-4 italic">Create a custom Identity to hide your public address.</p>
+              
+              <div className="flex items-center justify-between mb-6 p-3 bg-black/40 rounded border border-primary/10">
+                {user?.alias ? (
+                  <div className="flex items-center gap-3">
+                     <div className={`w-2 h-2 rounded-full ${user.isAliasActive ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-red-500 opacity-50'}`} />
+                     <span className="font-heading text-lg text-white font-black tracking-widest uppercase">
+                        @{user.alias}
+                     </span>
+                     <Button variant="outline" size="sm" onClick={toggleAliasActive} className="text-[9px] font-mono h-6 border-primary/20 hover:border-primary/50 text-primary/80">
+                        {user.isAliasActive ? 'DEACTIVATE' : 'ACTIVATE'}
+                     </Button>
+                  </div>
+                ) : (
+                  <span className="text-[10px] font-mono text-muted-foreground italic">No alias linked. Set one below.</span>
+                )}
+              </div>
             </div>
             <div className="mt-8 space-y-4">
                <div className="flex items-center gap-2">
