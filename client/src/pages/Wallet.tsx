@@ -264,7 +264,7 @@ export default function Wallet() {
 
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end border-b border-primary/20 pb-6 gap-6">
         <div className="w-full lg:w-auto">
-          <h1 className="text-4xl md:text-5xl font-heading text-white border-b border-accent/20 pb-2 w-fit mb-4" data-testid="text-wallet-title uppercase">WALLET DASHBOARD</h1>
+          <h1 className="text-4xl md:text-5xl font-heading text-white border-b border-accent/20 pb-2 w-fit mb-4" data-testid="text-wallet-title">WALLET DASHBOARD</h1>
           <div className="flex flex-wrap items-center gap-3 mt-4">
             <p className="font-mono text-primary/90 text-2xl md:text-3xl font-black truncate max-w-[280px] sm:max-w-md bg-primary/10 px-3 py-2 rounded-lg border border-primary/20 shadow-[0_0_15px_rgba(255,193,44,0.1)]" data-testid="text-wallet-address">
               {wallet?.walletAddress || "Loading..."}
@@ -275,7 +275,7 @@ export default function Wallet() {
               </button>
               <button onClick={() => setShowQR(!showQR)} className="p-3 bg-accent/10 rounded-md text-accent hover:text-white transition-colors" data-testid="button-show-qr">
                 <QrCode className="w-6 h-6" />
-              </button>               {/* BACKBONE MODE TOGGLE */}
+              </button>               {/* BACKBONE MODE TOGGLE */}
                <div className="flex items-center gap-3 ml-2">
                 <button 
                   onClick={toggleBackbone} 
@@ -290,7 +290,6 @@ export default function Wallet() {
                 </p>
                </div>
             </div>
-          </div>
           </div>
           {showQR && wallet?.walletAddress && (
             <div className="mt-3 bg-white rounded-md p-4 w-fit relative mx-auto lg:mx-0">
@@ -557,10 +556,10 @@ export default function Wallet() {
                
                <div className="bg-black/40 p-4 border border-primary/20 rounded-md flex flex-col sm:flex-row items-center justify-between gap-4 overflow-hidden">
                  <div className="min-w-0 w-full">
-                   <div className="text-xs font-mono text-primary/70 mb-2 uppercase tracking-tighter">CURRENT ALIAS</div>
-                   <div className="text-xl md:text-2xl font-heading text-white break-all pr-2">
-                      {(user as any)?.alias || "NOT_SET"}
-                   </div>
+                    <div className="text-xs font-mono text-primary/70 mb-2 uppercase tracking-tighter">CURRENT ALIAS</div>
+                    <div className="text-xl md:text-2xl font-heading text-white break-all pr-2">
+                       {(user as any)?.alias || "NOT_SET"}
+                    </div>
                  </div>
                  <div className="flex items-center gap-2">
                     <Button
