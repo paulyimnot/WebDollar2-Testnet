@@ -67,7 +67,7 @@ function Router() {
       </div>
 
       {announcement && (
-        <div className="bg-accent text-black py-2 px-4 text-center font-mono text-sm font-black tracking-widest relative z-[60] shadow-[0_4px_20px_rgba(255,193,44,0.3)] animate-pulse">
+        <div className="bg-accent text-black py-2 px-4 text-center font-mono text-sm font-black tracking-widest relative z-[60] shadow-[0_4px_20_rgba(255,193,44,0.3)] animate-pulse">
           <span className="mr-2">📢</span> OPERATOR ANNOUNCEMENT: {announcement.toUpperCase()}
           <button 
             onClick={() => {
@@ -104,7 +104,7 @@ function Router() {
   );
 }
 
-function BackboneManager() {
+function GlobalServices() {
   const { isBackbone } = useP2P();
   const { user } = useAuth();
   const [wakeLock, setWakeLock] = useState<any>(null);
@@ -155,36 +155,34 @@ function BackboneManager() {
 function App() {
   const [isDuplicateTab, setIsDuplicateTab] = useState(false);
   
-  // 📡 Initialize P2P Mesh Networking - call inside App so it's top-level
-  useP2P();
-
   useEffect(() => {
+    let channel: BroadcastChannel | null = null;
     try {
-      const channel = new BroadcastChannel('webdollar2_tab_lock');
+      channel = new BroadcastChannel('webdollar2_tab_lock');
       
       channel.postMessage({ type: 'CHECK_ACTIVE_TABS' });
       
       channel.onmessage = (event) => {
         if (event.data.type === 'CHECK_ACTIVE_TABS') {
-          if(!isDuplicateTab) channel.postMessage({ type: 'I_AM_ACTIVE' });
+          channel?.postMessage({ type: 'I_AM_ACTIVE' });
         } else if (event.data.type === 'I_AM_ACTIVE') {
           setIsDuplicateTab(true);
         }
       };
-
-      return () => channel.close();
     } catch (e) {
       console.warn("Tab lock failed:", e);
     }
-  }, [isDuplicateTab]);
+    return () => { if (channel) channel.close(); };
+  }, []); // Run ONCE on mount
 
   if (isDuplicateTab) {
     return (
       <div className="min-h-screen bg-[#020817] text-red-500 font-mono flex flex-col items-center justify-center p-8 text-center border-4 sm:border-8 border-red-900/50 shadow-[inset_0_0_100px_rgba(220,38,38,0.2)]">
         <h1 className="text-4xl md:text-6xl font-black mb-6 tracking-widest font-heading drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]">⚠️ TAB LOCKED</h1>
-        <p className="text-lg md:text-2xl text-white max-w-2xl font-bold">Only <strong className="text-accent underline text-3xl">ONE</strong> active WebDollar 2 Wallet is permitted per device!</p>
-        <p className="text-sm md:text-base mt-6 text-red-400 bg-red-900/20 px-6 py-4 rounded-lg border border-red-500/30">
-          Please close this tab and return to your original active session!
+        <p className="text-lg md:text-2xl text-white max-w-2xl font-bold font-heading">ONE DEVICE = ONE SESSION</p>
+        <p className="text-sm md:text-base mt-6 text-red-400 bg-red-900/20 px-6 py-4 rounded-lg border border-red-500/30 font-mono">
+          Only one active WebDollar 2 session is permitted per browser environment.<br/>
+          <strong>Close this tab and return to your main session.</strong>
         </p>
       </div>
     );
@@ -192,7 +190,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BackboneManager />
+      <GlobalServices />
       <Toaster />
       <Router />
       <HelpChat />
