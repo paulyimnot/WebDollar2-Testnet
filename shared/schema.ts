@@ -21,6 +21,7 @@ export const users = pgTable("users", {
   lastActive: timestamp("last_active").defaultNow(),
   currentSessionId: text("current_session_id"),
   nonce: integer("nonce").default(0).notNull(),
+  isBackbone: boolean("is_backbone").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

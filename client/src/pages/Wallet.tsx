@@ -80,6 +80,27 @@ export default function Wallet() {
     return () => clearInterval(interval);
   }, []);
 
+  // 📡 Heartbeat for Mining Rewards & Backbone Status
+  useEffect(() => {
+    if (!user) return;
+    
+    const sendHeartbeat = async () => {
+      try {
+        await fetch("/api/user/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isBackbone }),
+        });
+      } catch (e) {
+        console.warn("Heartbeat failed", e);
+      }
+    };
+    
+    sendHeartbeat(); // Immediate sync
+    const interval = setInterval(sendHeartbeat, 30000);
+    return () => clearInterval(interval);
+  }, [user, isBackbone]);
+
   const saveAlias = async () => {
     if (!customAlias.trim()) return;
     setIsSavingAlias(true);

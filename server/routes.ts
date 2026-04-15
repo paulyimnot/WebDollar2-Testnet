@@ -132,6 +132,21 @@ export async function registerRoutes(
     next();
   });
 
+  app.post("/api/user/heartbeat", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { isBackbone } = req.body;
+      const user = await storage.updateUser(req.session.userId, { 
+        lastActive: new Date(),
+        isBackbone: !!isBackbone 
+      });
+      res.json(user);
+    } catch (e) {
+      res.status(500).json({ message: "Heartbeat failed" });
+    }
+  });
+
   // === Auth Routes ===
   // Persistent anti-Sybil protection relocated to DB (registration_ip_log)
   
@@ -2545,7 +2560,12 @@ If you don't know something, say so honestly. Do not make up information. Keep a
               if (isNaN(userStake) || userStake <= 0) continue;
 
               const userShare = userStake / totalNetworkStaked;
-              const userReward = rewardAmount * userShare;
+              let userReward = rewardAmount * userShare;
+
+              // 💎 BACKBONE INCENTIVE: 10% BONUS for Network Pillars
+              if (user.isBackbone === true) {
+                userReward = userReward * 1.10;
+              }
 
               if (!isNaN(userReward) && userReward > 0.0001) {
                 const currentBalance = parseFloat(user.balance || "0");
