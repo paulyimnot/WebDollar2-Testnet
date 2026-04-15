@@ -430,7 +430,7 @@ export default function Wallet() {
                   <div className="flex items-center gap-3">
                      <div className={`w-2 h-2 rounded-full ${user.isAliasActive ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-red-500 opacity-50'}`} />
                      <span className="font-heading text-lg text-white font-black tracking-widest uppercase">
-                        @{user.alias}
+                        {user.alias}
                      </span>
                      <Button variant="outline" size="sm" onClick={toggleAliasActive} className="text-[9px] font-mono h-6 border-primary/20 hover:border-primary/50 text-primary/80">
                         {user.isAliasActive ? 'DEACTIVATE' : 'ACTIVATE'}
