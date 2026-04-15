@@ -436,7 +436,7 @@ export default function Wallet() {
                         variant="outline" 
                         size="sm" 
                         onClick={toggleAliasActive} 
-                        className={`text-[9px] font-mono h-6 transition-all duration-500 border-2 ${user.isAliasActive ? 'bg-green-500/10 border-green-500 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] hover:bg-green-500 hover:text-black' : 'bg-red-500/10 border-red-500 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:bg-red-500 hover:text-white'}`}
+                        className={`text-[9px] font-mono h-6 transition-all duration-500 border-2 ${!user.isAliasActive ? 'bg-green-500/10 border-green-500 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] hover:bg-green-500 hover:text-black' : 'bg-red-500/10 border-red-500 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:bg-red-500 hover:text-white'}`}
                      >
                         {user.isAliasActive ? 'DEACTIVATE' : 'ACTIVATE'}
                      </Button>
