@@ -349,7 +349,17 @@ export default function Wallet() {
                        </span>
                     </div>
                  </div>
-              </div>
+                  <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 px-3 py-1.5 rounded group hover:border-red-500 transition-all cursor-help relative overflow-hidden">
+                     {isBackbone && <div className="absolute inset-0 bg-red-500/5 animate-pulse" />}
+                     <ShieldCheck className={`w-3.5 h-3.5 ${isBackbone ? 'text-red-500' : 'text-primary/60'}`} />
+                     <div className="flex flex-col">
+                        <span className="text-[9px] font-heading font-black text-red-400 tracking-[0.1em] uppercase leading-none mb-0.5">WEBMESH STATUS</span>
+                        <span className="text-base font-mono font-black text-white leading-none">
+                           {isBackbone ? "BACKBONE" : "FEDERATED"}
+                        </span>
+                     </div>
+                  </div>
+               </div>
             </div>
           )}
           <div className="mt-3 w-full lg:w-auto">

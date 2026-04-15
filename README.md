@@ -9,11 +9,19 @@ WebDollar 2 is built on the revolutionary **DIELBS (Distributed Intelligent Elas
 - **Micro-Fee Architecture:** Prevents network spam while ensuring long-term engine maintenance and node viability.
 - **Browser-Native:** Mine and transact directly from your browser without installing any software.
 - **High Concurrency:** Verified peak performance of **31,000+ TPS** (Transactions Per Second).
+- **WebMesh Backbone:** Stability-focused P2P mesh architecture with dedicated Backbone nodes.
+- **Vault Security:** Strict Single-Session enforcement to protect account integrity.
+
+## 🎁 Early Access Waitlist
+We are currently recruiting for the **Mainnet Genesis Waitlist**.
+- **Reward:** 1,000 WEBD2 for the first 1,000 early adopters.
+- **Signup:** Join via the official [waitlist portal](https://webdollar2.com).
 
 ## 🛠️ Technology Stack
 - **Engine:** Pro-Tier DIELBS Integration (Proprietary core with public adapter).
+- **P2P MESH:** Custom WebSocket Signaling with Backbone prioritization.
 - **Frontend:** React + TypeScript + Vite.
-- **Security:** Hardened with Replay Protection (Nonce-based) and Atomic State Management.
+- **Vault Security:** Hardened with Replay Protection (Nonce-based) and **Single-Session Strict Validation**.
 
 ## 📄 Documentation
 Dive deeper into the technology behind WEBD2:

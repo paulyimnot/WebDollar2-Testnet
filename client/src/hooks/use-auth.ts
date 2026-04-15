@@ -12,7 +12,18 @@ export function useAuth() {
     queryKey: [api.auth.me.path],
     queryFn: async () => {
       const res = await fetch(api.auth.me.path, { credentials: "include" });
-      if (res.status === 401) return null;
+      if (res.status === 401) {
+        const body = await res.json().catch(() => ({}));
+        if (body.sessionExpired) {
+          toast({
+            title: "SESSION EXPIRED",
+            description: "You have been logged in on another device.",
+            variant: "destructive",
+            className: "font-mono border-destructive bg-black text-destructive",
+          });
+        }
+        return null;
+      }
       if (!res.ok) throw new Error("Failed to fetch user");
       return await res.json();
     },

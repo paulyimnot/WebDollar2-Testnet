@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   isAliasActive: boolean("is_alias_active").default(false),
   stakingStoppedAt: timestamp("staking_stopped_at"),
   lastActive: timestamp("last_active").defaultNow(),
+  currentSessionId: text("current_session_id"),
   nonce: integer("nonce").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });

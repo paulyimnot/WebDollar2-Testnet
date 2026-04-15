@@ -114,6 +114,24 @@ export async function registerRoutes(
     }),
   }));
 
+  // 🛡️ WAVE 2: SINGLE SESSION ENFORCEMENT MIDDLEWARE
+  app.use(async (req, res, next) => {
+    // @ts-ignore
+    const userId = req.session.userId;
+    if (userId) {
+      const user = await storage.getUser(userId);
+      // @ts-ignore
+      if (user && user.currentSessionId && user.currentSessionId !== req.sessionID) {
+        console.log(`[AUTH] Session conflict for user ${userId}. Invalidating old session.`);
+        req.session.destroy(() => {
+          res.clearCookie("wd2_session");
+        });
+        return res.status(401).json({ message: "You have been logged in on another device.", sessionExpired: true });
+      }
+    }
+    next();
+  });
+
   // === Auth Routes ===
   // Persistent anti-Sybil protection relocated to DB (registration_ip_log)
   
@@ -187,6 +205,8 @@ export async function registerRoutes(
         await db.execute(sql`INSERT INTO registration_ip_log (ip) VALUES (${ip}) ON CONFLICT DO NOTHING`);
       }
       req.session.userId = user.id;
+      // Record session for single-device enforcement
+      await storage.updateUser(user.id, { currentSessionId: req.sessionID });
       const { password: _, ...safeUser } = user;
       res.status(201).json(safeUser);
     } catch (err) {
@@ -259,7 +279,8 @@ export async function registerRoutes(
 
       // @ts-ignore
       req.session.userId = user.id;
-      console.log(`[LOGIN] Login successful for "${rawTrimmed}", session userId set to ${user.id}`);
+      // Record session for single-device enforcement
+      await storage.updateUser(user.id, { currentSessionId: req.sessionID });
       console.log(`[LOGIN] Login successful for "${rawTrimmed}", session userId set to ${user.id}`);
 
       const { password: _, totpSecret: _s, ...safeUser } = user;
@@ -528,6 +549,8 @@ export async function registerRoutes(
     delete req.session.pending2FAUserId;
     // @ts-ignore
     req.session.userId = user.id;
+    // Record session for single-device enforcement
+    await storage.updateUser(user.id, { currentSessionId: req.sessionID });
     const { password: _, totpSecret: _s, ...safeUser } = user;
     res.json(safeUser);
   });
