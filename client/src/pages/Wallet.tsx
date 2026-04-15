@@ -429,7 +429,7 @@ export default function Wallet() {
                 {user?.alias ? (
                   <div className="flex items-center gap-3">
                      <div className={`w-2 h-2 rounded-full ${user.isAliasActive ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-red-500 opacity-50'}`} />
-                     <span className="font-heading text-lg text-white font-black tracking-widest uppercase">
+                     <span className="font-heading text-lg text-white font-black tracking-widest">
                         {user.alias}
                      </span>
                      <Button 
