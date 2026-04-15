@@ -460,15 +460,15 @@ export default function Wallet() {
           <div className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-mono text-primary/70">RECIPIENT ADDRESS OR ALIAS</label>
-              <Input value={recipient} onChange={(e) => setRecipient(e.target.value)} className="bg-input border-primary/30 font-mono py-8 text-lg" placeholder="Enter Address or @Alias..." />
+              <Input value={recipient} onChange={(e) => setRecipient(e.target.value)} className="bg-black/60 border-primary/30 font-mono py-8 text-lg text-white" placeholder="Enter Address or Alias..." />
             </div>
             <div className="space-y-4">
               <label className="text-sm font-mono text-primary font-bold uppercase tracking-wider">AMOUNT (WD2)</label>
-              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="bg-input border-primary/30 font-mono text-3xl py-10 text-accent font-black max-w-[280px]" placeholder="0.00" />
+              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="bg-black/60 border-primary/30 font-mono text-3xl py-10 text-accent font-black max-w-[280px]" placeholder="0.00" />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-mono text-primary/70 uppercase tracking-widest flex items-center gap-2">PASSWORD</label>
-              <Input type="password" placeholder="Confirm your password" value={txPassword} onChange={(e) => setTxPassword(e.target.value)} className="bg-input border-primary/20 font-mono py-6" />
+              <Input type="password" placeholder="Confirm your password" value={txPassword} onChange={(e) => setTxPassword(e.target.value)} className="bg-black/60 border-primary/30 font-mono py-6 text-white" />
             </div>
             <Button className="w-full btn-neon" disabled={isTransferring || !amount || !recipient || !txPassword} onClick={handleTransfer}>
               {isTransferring ? <Loader2 className="w-4 h-4 animate-spin" /> : "EXECUTE WD2 TRANSFER"}
