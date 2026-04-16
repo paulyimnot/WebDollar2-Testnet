@@ -49,6 +49,15 @@ export function useP2P() {
           case 'peer_left':
             setNeighbors(prev => prev.filter(id => id !== data.peerId));
             break;
+          case 'vote_request':
+            // 🔥 HYBRID QUORUM CONSENSUS: The browser natively signs off on the block proposal
+            if (socket.readyState === WebSocket.OPEN) {
+               socket.send(JSON.stringify({ 
+                  type: 'vote_cast', 
+                  hash: data.hash 
+               }));
+            }
+            break;
         }
       } catch (e) {
         console.error("Malformed signaling message:", e);

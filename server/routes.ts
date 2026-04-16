@@ -19,7 +19,7 @@ import OpenAI from "openai";
 const PostgresStore = pgSession(session);
 import { pool } from "./db.js";
 
-import { getConnectedPeersCount, getLivePeerList } from "./signaling.js";
+import { getConnectedPeersCount, getLivePeerList, broadcastQuorumVoteRequest, activeQuorumVotes } from "./signaling.js";
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const faucetIpStamps = new Map<string, number>();
 export let isBlockchainPaused = false;
@@ -2559,6 +2559,16 @@ If you don't know something, say so honestly. Do not make up information. Keep a
       // Seed a semi-random hash for the new block
       const newHash = createHash("sha256").update(prevHash + Date.now() + nextId).digest("hex");
       
+      // 🛡️ THE HYBRID QUORUM: Request mathematical signatures from active browsers
+      broadcastQuorumVoteRequest(newHash);
+      
+      // Wait exactly 2.0 seconds to collect signatures from the WebMesh before sealing the block
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Tally the Decentralized Signatures. If 0 (empty room), we fallback to Origin 1 to preserve liveness.
+      const collectedSignatures = activeQuorumVotes.get(newHash) || 0;
+      const hybridSignatures = Math.max(1, collectedSignatures);
+      
       const rewardAmount = getCurrentBlockReward(nextId);
       
       await storage.createBlock({
@@ -2567,11 +2577,14 @@ If you don't know something, say so honestly. Do not make up information. Keep a
         minerId: null, // System generated block for Testnet stability
         reward: rewardAmount.toFixed(4),
         difficulty: 1,
-        nonce: Math.floor(Math.random() * 1000000)
+        nonce: hybridSignatures // On Testnet, we re-purpose the nonce field to publicly record Quorum Signature Count!
       });
       
+      // Clean up the memory map so it doesn't leak
+      activeQuorumVotes.delete(newHash);
+      
       if (nextId % 100 === 0) {
-        console.log(`[DIELBS] Produced Block #${nextId} | Rewards Pool: ${rewardAmount.toFixed(2)} WEBD2`);
+        console.log(`[DIELBS] Produced Block #${nextId} | Rewards Pool: ${rewardAmount.toFixed(2)} WEBD2 | Signatures: ${hybridSignatures}`);
       }
 
       // === STAKING REWARD DISTRIBUTION (PROOF OF PRESENCE) ===

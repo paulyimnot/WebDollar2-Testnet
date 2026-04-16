@@ -6,6 +6,18 @@ export function getConnectedPeersCount(): number {
   return peers.size;
 }
 
+export const activeQuorumVotes = new Map<string, number>();
+
+export function broadcastQuorumVoteRequest(blockHash: string) {
+  activeQuorumVotes.set(blockHash, 0); // Reset vote tally for this hash
+  const requestPayload = JSON.stringify({ type: 'vote_request', hash: blockHash });
+  for (const peer of peers.values()) {
+    if (peer.ws.readyState === WebSocket.OPEN) {
+      peer.ws.send(requestPayload);
+    }
+  }
+}
+
 export function getLivePeerList(): Array<{ id: string; meshLinks: number; connectedAt: number; uptimeMs: number }> {
   const now = Date.now();
   return Array.from(peers.values()).map(p => ({
@@ -107,6 +119,18 @@ export function setupSignaling(server: any, app: any, storage: any) {
                                   }));
                               } catch (e) { }
                           }
+                      }
+                      break;
+
+                  case 'declare_backbone':
+                      const p = peers.get(peerId);
+                      if (p) p.isBackbone = true;
+                      break;
+
+                  case 'vote_cast':
+                      if (data.hash) {
+                         const currentVotes = activeQuorumVotes.get(data.hash) || 0;
+                         activeQuorumVotes.set(data.hash, currentVotes + 1);
                       }
                       break;
 
