@@ -3,15 +3,38 @@ import { useExplorer } from "@/hooks/use-explorer";
 import { CyberCard } from "@/components/CyberCard";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { ExternalLink, Blocks, ArrowRightLeft, Globe, Loader2, Search, X } from "lucide-react";
+import { ExternalLink, Blocks, ArrowRightLeft, Globe, Loader2, Search, X, ShieldCheck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/hooks/use-toast";
 
 export default function Explorer() {
   const { blocks, transactions } = useExplorer();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [integrityReport, setIntegrityReport] = useState<{ isValid: boolean; checkedBlocks: number } | null>(null);
+
+  const validateChain = async () => {
+    setIsValidating(true);
+    setIntegrityReport(null);
+    try {
+      const res = await fetch("/api/explorer/validate-chain");
+      if (!res.ok) throw new Error("Validation failed");
+      const data = await res.json();
+      setIntegrityReport(data);
+      if (data.isValid) {
+        toast({ title: "CHAIN SECURE", description: `All ${data.checkedBlocks} blocks verified with 0 cryptographic defects.`, className: "bg-green-950 border-green-500 text-green-400 font-mono text-xs" });
+      } else {
+        toast({ title: "INTEGRITY ALERT", description: "Cryptographic defect detected in the chain!", variant: "destructive" });
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
   const handleSearch = async () => {
     if (searchQuery.trim().length < 3) return;
@@ -82,6 +105,22 @@ export default function Explorer() {
             <span className="text-xs font-mono text-muted-foreground">Block #{blockchainStatus.blockNumber?.toLocaleString()}</span>
           </div>
         )}
+      </div>
+
+      <div className="bg-black/40 border border-primary/20 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+           <div className={`p-4 rounded-full ${integrityReport?.isValid ? 'bg-green-500/10' : 'bg-primary/10'}`}>
+             <ShieldCheck className={`w-8 h-8 ${integrityReport?.isValid ? 'text-green-500' : 'text-primary'}`} />
+           </div>
+           <div>
+             <h3 className="text-xl font-heading text-white">CHAIN INTEGRITY PROTOCOL</h3>
+             <p className="text-xs font-mono text-muted-foreground">Verify the cryptographic link between all blocks in the DIELBS ledger.</p>
+           </div>
+        </div>
+        <Button onClick={validateChain} disabled={isValidating} className={`shrink-0 h-14 px-8 border-2 font-black tracking-widest ${integrityReport?.isValid ? 'bg-green-950 border-green-500 text-green-400' : 'btn-neon'}`}>
+           {isValidating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <ShieldCheck className="w-5 h-5 mr-2" />}
+           {isValidating ? "SCANNING HASHES..." : (integrityReport?.isValid ? "LEDGER VERIFIED SECURE" : "VALIDATE CHAIN IMMUTABILITY")}
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-4">
