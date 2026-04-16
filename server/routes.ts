@@ -2546,8 +2546,12 @@ If you don't know something, say so honestly. Do not make up information. Keep a
 
   // === Background Block Producer (DIELBS Engine) ===
   // Generates 1 native block every 5 seconds to match specification
+  // 🌍 GEO-CLUSTER ARCHITECTURE: Only servers designated as Validator Nodes will produce blocks.
+  // Other servers act as high-speed RPC/P2P relays for immediate scaling.
   setInterval(async () => {
     try {
+      // Leader Election logic: Default to true unless explicitly disabled for RPC nodes
+      if (process.env.IS_BLOCK_PRODUCER === "false") return;
       const latest = await storage.getLatestBlock();
       const nextId = (latest?.id || 0) + 1;
       const prevHash = latest?.hash || "0x00000000000000000000000000000000GENESIS_BLOCK_WD2_PROTOCOL_V2";
