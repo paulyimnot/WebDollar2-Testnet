@@ -110,7 +110,7 @@ export default function DeveloperHub() {
               <div className="bg-black border border-white/10 p-3 rounded mt-4">
                 <p className="text-xs text-white/40 mb-1 font-mono uppercase">Execution Script (Requires Node.js)</p>
                 <code className="text-[10px] sm:text-xs text-green-400 break-all select-all block">
-                  node --import tsx script/stress-test.ts &lt;user&gt; &lt;pass&gt; &lt;target_wallet&gt; 5000 50 https://wd2.net
+                  node --import tsx script/stress-test.ts &lt;user&gt; &lt;pass&gt; &lt;target_wallet&gt; 5000 50 https://webdollar2.com
                 </code>
               </div>
             </CardContent>
