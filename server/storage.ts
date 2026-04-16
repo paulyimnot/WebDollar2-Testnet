@@ -271,7 +271,8 @@ export class DatabaseStorage implements IStorage {
     receiverAddrId: number,
     amount: number,
     senderAddress: string,
-    receiverAddress: string
+    receiverAddress: string,
+    expectedNonce?: number
   ): Promise<Transaction> {
     const client = await pool.connect();
     try {
@@ -292,6 +293,14 @@ export class DatabaseStorage implements IStorage {
       }
 
       const currentBalance = lockResult.rows[0].balance;
+      const currentNonce = lockResult.rows[0].nonce;
+
+      // 0.5 NONCE VALIDATION INSIDE THE LOCK (Replay Attack / Double Spend Protection)
+      if (expectedNonce !== undefined && Number(currentNonce) !== Number(expectedNonce)) {
+        await client.query('ROLLBACK');
+        throw new Error(`Invalid network nonce (Strict Consensus Override). Expected ${currentNonce}, got ${expectedNonce}.`);
+      }
+
       if (parseFloat(currentBalance) < amount) {
         await client.query('ROLLBACK');
         throw new Error('Insufficient balance (Race Protection Active)');

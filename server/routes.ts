@@ -923,7 +923,8 @@ export async function registerRoutes(
         recipientWalletAddr.id,
         amountNum,
         sender.walletAddress!,
-        recipientAddress.trim()
+        recipientAddress.trim(),
+        nonce
       );
       const currentLat = Math.round(performance.now() - startTime);
       
@@ -1015,7 +1016,8 @@ export async function registerRoutes(
         recipientWalletAddr.id,
         amountNum,
         "***PRIVATE_SENDER***",
-        "***PROTECTED_RECIPIENT***"
+        "***PROTECTED_RECIPIENT***",
+        nonce
       );
       lastTxLatency = Math.round(performance.now() - startTime);
 

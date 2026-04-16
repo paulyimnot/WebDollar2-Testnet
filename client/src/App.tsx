@@ -24,6 +24,7 @@ import Faucet from "@/pages/Faucet";
 import HowItWorks from "@/pages/HowItWorks";
 import Security from "@/pages/Security";
 import NotFound from "@/pages/not-found";
+import DoubleSpendTest from "@/pages/DoubleSpend";
 
 function Router() {
   const { user } = useAuth();
@@ -96,6 +97,7 @@ function Router() {
           <Route path="/blackpaper" component={Blackpaper} />
           <Route path="/how-it-works" component={HowItWorks} />
           <Route path="/security" component={Security} />
+          <Route path="/debug-doublespend" component={DoubleSpendTest} />
           <Route component={NotFound} />
         </Switch>
       </main>
