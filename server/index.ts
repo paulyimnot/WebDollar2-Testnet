@@ -9,6 +9,7 @@ import { setupSignaling } from "./signaling.js";
 import helmet from "helmet";
 import compression from "compression";
 import { rateLimit } from "express-rate-limit";
+import { clusterManager } from "./cluster.js";
 
 // 🛡️ WAVE 1: CRITICAL STARTUP VALIDATION
 if (!process.env.SESSION_SECRET) {
@@ -190,6 +191,9 @@ app.use((req, res, next) => {
 
   next();
 });
+
+  // Initialize Geo-Distributed Cluster Sync
+  clusterManager.init();
 
 (async () => {
   await registerRoutes(httpServer, app);
