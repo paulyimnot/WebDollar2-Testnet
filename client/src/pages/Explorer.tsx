@@ -204,6 +204,7 @@ export default function Explorer() {
                   <th className="py-3 px-2 text-[10px] tracking-widest uppercase opacity-50 font-black">HEIGHT</th>
                   <th className="py-3 px-2 text-[10px] tracking-widest uppercase opacity-50 font-black">BLOCK HASH</th>
                   <th className="py-3 px-2 text-[10px] tracking-widest uppercase opacity-50 font-black">VALIDATOR</th>
+                  <th className="py-3 px-2 text-center text-[10px] tracking-widest uppercase text-green-400/70 font-black">QUORUM SIGS</th>
                   <th className="py-3 px-2 text-right text-[10px] tracking-widest uppercase opacity-50 font-black">TIME</th>
                 </tr>
               </thead>
@@ -213,6 +214,7 @@ export default function Explorer() {
                     <td className="py-3 px-2 text-accent font-black">#{block.id}</td>
                     <td className="py-3 px-2 text-white/80 font-mono text-xs md:text-sm">{block.hash.substring(0, 16)}...</td>
                     <td className="py-3 px-2 text-primary/70 text-xs md:text-sm truncate max-w-[150px]">{block.minerAddress ? `${block.minerAddress.substring(0, 12)}...` : `DIELBS-NODE #${block.minerId}`}</td>
+                    <td className="py-3 px-2 text-center text-green-400 font-mono text-xs font-black">{block.nonce}</td>
                     <td className="py-3 px-2 text-right text-muted-foreground text-xs">
                       {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
                     </td>
