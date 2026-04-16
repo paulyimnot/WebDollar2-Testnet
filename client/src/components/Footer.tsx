@@ -1,4 +1,5 @@
 import logoImg from "@assets/1771108919092_1771109065229.jpg";
+import { Link } from "wouter";
 
 export function Footer() {
   return (
@@ -10,9 +11,9 @@ export function Footer() {
         </div>
 
         <div className="flex flex-wrap gap-6 justify-center">
+          <Link href="/protocol"><a className="hover:text-primary transition-colors cursor-pointer" data-testid="link-protocol">PROTOCOL HUB</a></Link>
           <a href="https://webdollar.io/public/doc/WebDollar-White-Paper.pdf" target="_blank" className="hover:text-primary transition-colors" data-testid="link-whitepaper">WHITEPAPER</a>
           <a href="https://github.com/WebDollar/Node-WebDollar" target="_blank" className="hover:text-primary transition-colors" data-testid="link-github">GITHUB</a>
-          <a href="#" className="hover:text-primary transition-colors" data-testid="link-discord">DISCORD</a>
         </div>
 
         <div className="flex flex-col items-end gap-1">
