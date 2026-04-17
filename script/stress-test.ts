@@ -188,17 +188,17 @@ async function run() {
       } catch (e: any) {
          const latency = Date.now() - txStart;
          latencies.push(latency);
-         failed++;
-         rawLogs.push({ id, status: "ERROR", latency_ms: latency, error: e.message, timestamp: new Date().toISOString() });
+        rawLogs.push({ id, status: "ERROR", latency_ms: latency, error: e.message, timestamp: new Date().toISOString() });
          return;
-      } finally {
-        completed++;
-        if (completed % 10 === 0 || completed === TOTAL_TXS) {
-          const progressPercent = ((completed/TOTAL_TXS)*100).toFixed(1);
-          const successStatus = success;
-          process.stdout.write(`\rProgress: ${completed}/${TOTAL_TXS} (${progressPercent}%) | Success: ${successStatus} | Failed: ${failed}    `);
-        }
       }
+    }
+    
+    // Only increment completion once the transaction id is fully processed (success or final failure)
+    completed++;
+    if (completed % 10 === 0 || completed === TOTAL_TXS) {
+      const progressPercent = ((completed/TOTAL_TXS)*100).toFixed(1);
+      const successStatus = success;
+      process.stdout.write(`\rProgress: ${completed}/${TOTAL_TXS} (${progressPercent}%) | Success: ${successStatus} | Failed: ${failed}    `);
     }
   };
 
