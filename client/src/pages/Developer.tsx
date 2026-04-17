@@ -67,56 +67,7 @@ export default function DeveloperHub() {
         </div>
       </section>
 
-      {/* SECTION 3: ADVERSARIAL TESTING TOOLS */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-3 border-l-4 border-red-500 pl-4">
-          <ShieldAlert className="w-8 h-8 text-red-500" />
-          <h2 className="text-2xl font-bold font-heading tracking-widest text-white">ADVERSARIAL TESTING TERMINALS</h2>
-        </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Card 1: Double Spend */}
-          <Card className="bg-red-950/20 border-red-900 hover:border-red-500 transition-colors">
-            <CardHeader>
-              <CardTitle className="text-red-400 flex items-center font-mono">
-                <Network className="mr-3 w-5 h-5" />
-                Network Finality & Security
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm font-mono text-white/70">
-                Auditor challenge measuring Reorg Defense and Double-Spend resistance. This visual UI will intentionally parallel-clone a cryptographic payload and attempt a severe Race Condition attack on the mesh.
-              </p>
-              <Link href="/debug-doublespend">
-                <button className="w-full bg-red-900/50 hover:bg-red-600 border border-red-500 text-white font-black tracking-widest h-12 rounded transition-colors mt-4">
-                  LAUNCH DOUBLE-SPEND ATTACK
-                </button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Card 2: Stress Tester */}
-          <Card className="bg-primary/5 border-primary/20 hover:border-primary/50 transition-colors">
-            <CardHeader>
-              <CardTitle className="text-accent flex items-center font-mono">
-                <Zap className="mr-3 w-5 h-5" />
-                Sustained Throughput (TPS)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm font-mono text-white/70">
-                Independent Node.js testing script strictly measuring Sustained TPS, Median Latency, p95/p99 Network Overhead, and total dropped requests.
-              </p>
-              <div className="bg-black border border-white/10 p-3 rounded mt-4">
-                <p className="text-xs text-white/40 mb-1 font-mono uppercase">Execution Script (Requires Node.js)</p>
-                <code className="text-[10px] sm:text-xs text-green-400 break-all select-all block">
-                  node --import tsx script/stress-test.ts &lt;user&gt; &lt;pass&gt; &lt;target_wallet&gt; 5000 50 https://webdollar2.com
-                </code>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
 
     </div>
   );
