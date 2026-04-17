@@ -20,7 +20,7 @@ async function run() {
   if (args.length < 5) {
     console.log("❌ Missing Arguments!");
     console.log("Usage: node --import tsx script/stress-test.ts <USERNAME> <PASSWORD> <RECIPIENT_ADDRESS> <TOTAL_TXS> <THREADS> [TARGET_URL]");
-    process.exit(1);
+    process.exitCode = 1; return;
   }
 
   const [username, password, rawRecipient, totalTxsStr, threadsStr, targetUrlOpt] = args;
@@ -39,11 +39,11 @@ async function run() {
           console.log(`    Resolved to: ${recipientAddress}`);
        } else {
           console.error(`❌ Alias resolution failed! Ensure '${rawRecipient}' is a valid user.`);
-          process.exit(1);
+          process.exitCode = 1; return;
        }
      } catch (e) {
        console.error("❌ Network error resolving Alias.");
-       process.exit(1);
+       process.exitCode = 1; return;
      }
   }
 
@@ -82,7 +82,7 @@ async function run() {
 
   } catch (error) {
     console.error("❌ Authentication Error:", error);
-    process.exit(1);
+    process.exitCode = 1; return;
   }
 
   // 2. Fetch Pre-flight Crypto Material
@@ -116,20 +116,25 @@ async function run() {
      privateKeyBytes = Buffer.from(privateKeyHex, "hex");
   } catch (err) {
      console.error("❌ Decryption failed! Bad password?", err);
-     process.exit(1);
+     process.exitCode = 1; return;
   }
 
-  console.log(`[3] Executing Cryptographic Benchmark...`);
+  console.log(`[4] Executing Cryptographic Benchmark...`);
   const startTime = Date.now();
   let completed = 0;
   let success = 0;
   let failed = 0;
   let latencies: number[] = [];
-
   const rawLogs: any[] = [];
 
-  // Helper function to send a cleanly signed transaction
-  const sendTx = async (id: number, txNonce: number) => {
+  // Sharing a synchronized nonce state across threads
+  let syncedNonce = currentNonce;
+
+  const sendTx = async (id: number) => {
+    // 🔒 Synchronized Nonce Assignment:
+    // For 100% reliability with a single wallet, we increment nonce only on start.
+    const txNonce = syncedNonce++; 
+    
     const txStart = Date.now();
     try {
       const amount = "0.0001";
@@ -151,7 +156,7 @@ async function run() {
           nonce: txNonce
         })
       });
-      
+
       const latency = Date.now() - txStart;
       latencies.push(latency);
       
@@ -159,8 +164,13 @@ async function run() {
         success++;
         rawLogs.push({ id, status: "SUCCESS", latency_ms: latency, timestamp: new Date().toISOString() });
       } else {
-        failed++;
         const errorText = await res.text();
+        failed++;
+        // If we get an Invalid Nonce error, we parse the 'Expected' value to resync
+        if (errorText.includes("Invalid network nonce")) {
+           const match = errorText.match(/Expected (\d+)/);
+           if (match) syncedNonce = parseInt(match[1], 10);
+        }
         rawLogs.push({ id, status: "FAILED", latency_ms: latency, error: errorText, timestamp: new Date().toISOString() });
       }
     } catch (e: any) {
@@ -170,19 +180,21 @@ async function run() {
        rawLogs.push({ id, status: "ERROR", latency_ms: latency, error: e.message, timestamp: new Date().toISOString() });
     } finally {
       completed++;
-      if (completed % 100 === 0) {
-        process.stdout.write(`\rProgress: ${completed}/${TOTAL_TXS} (${((completed/TOTAL_TXS)*100).toFixed(1)}%) | Success: ${success} | Failed: ${failed}`);
+      if (completed % 10 === 0 || completed === TOTAL_TXS) {
+        const progress = ((completed/TOTAL_TXS)*100).toFixed(1);
+        const successRate = ((success/completed)*100).toFixed(1);
+        process.stdout.write(`\rProgress: ${completed}/${TOTAL_TXS} (${progress}%) | Success: ${success} (${successRate}%) | Failed: ${failed}    `);
       }
     }
   };
 
-  // Process queue with controlled concurrency (THREADS)
   let currentIndex = 0;
+  // If use same wallet, the server row lock force sequential execution per ID.
+  // We use parallel workers to fill the pipe, but keep nonce order.
   const workers = Array(THREADS).fill(null).map(async () => {
     while (currentIndex < TOTAL_TXS) {
-      const id = currentIndex++;
-      const localNonce = currentNonce + id; // Chronological Nonce increment for massive sustained load
-      await sendTx(id, localNonce);
+      const id = ++currentIndex;
+      await sendTx(id);
     }
   });
 
