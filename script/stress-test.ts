@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
+import { signAsync } from '@noble/secp256k1';
 
 /**
  * WEBDOLLAR 2 - OFFICIAL STRESS TEST & TPS BENCHMARK TOOL
@@ -64,7 +66,41 @@ async function run() {
     process.exit(1);
   }
 
-  console.log(`[2] Executing Benchmark...`);
+  // 2. Fetch Pre-flight Crypto Material
+  console.log(`[2] Extracting Private Key & Nonce Syncer...`);
+  let encryptedKey = "";
+  let currentNonce = 0;
+  try {
+    const preRes = await fetch(`${BASE_URL}/api/wallet/sign-preflight`, {
+      method: "GET",
+      headers: { "Cookie": cookie }
+    });
+    if (!preRes.ok) throw new Error("Failed to get preflight data");
+    const preData = await preRes.json();
+    encryptedKey = preData.encryptedPrivateKey;
+    currentNonce = preData.nonce;
+  } catch (err) {
+    console.error("❌ Preflight sync failed. Is your wallet setup?", err);
+    process.exit(1);
+  }
+
+  // 3. Decrypt Key Natively
+  let privateKeyBytes: Uint8Array;
+  let privateKeyHex: string;
+  try {
+     const [ivHex, encHex] = encryptedKey.split(":");
+     const keySync = crypto.createHash('sha256').update(password).digest();
+     const decipher = crypto.createDecipheriv('aes-256-cbc', keySync, Buffer.from(ivHex, "hex"));
+     let decrypted = decipher.update(encHex, 'hex', 'utf8');
+     decrypted += decipher.final('utf8');
+     privateKeyHex = decrypted;
+     privateKeyBytes = Buffer.from(privateKeyHex, "hex");
+  } catch (err) {
+     console.error("❌ Decryption failed! Bad password?", err);
+     process.exit(1);
+  }
+
+  console.log(`[3] Executing Cryptographic Benchmark...`);
   const startTime = Date.now();
   let completed = 0;
   let success = 0;
@@ -73,10 +109,16 @@ async function run() {
 
   const rawLogs: any[] = [];
 
-  // Helper function to send a single transaction
-  const sendTx = async (id: number) => {
+  // Helper function to send a cleanly signed transaction
+  const sendTx = async (id: number, txNonce: number) => {
     const txStart = Date.now();
     try {
+      const amount = "0.0001";
+      const messageStr = JSON.stringify({ recipientAddress, amount, nonce: txNonce });
+      const hashBuffer = crypto.createHash("sha256").update(messageStr).digest();
+      const sigBytes = await signAsync(new Uint8Array(hashBuffer), privateKeyBytes, { prehash: false });
+      const signature = Array.from(sigBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
       const res = await fetch(`${BASE_URL}/api/wallet/transfer`, {
         method: 'POST',
         headers: { 
@@ -85,8 +127,9 @@ async function run() {
         },
         body: JSON.stringify({
           recipientAddress,
-          amount: "0.0001", // Micro-transaction for load testing
-          password // Triggers backend signing mechanism
+          amount,
+          signature,
+          nonce: txNonce
         })
       });
       
@@ -119,7 +162,8 @@ async function run() {
   const workers = Array(THREADS).fill(null).map(async () => {
     while (currentIndex < TOTAL_TXS) {
       const id = currentIndex++;
-      await sendTx(id);
+      const localNonce = currentNonce + id; // Chronological Nonce increment for massive sustained load
+      await sendTx(id, localNonce);
     }
   });
 
