@@ -132,7 +132,8 @@ async function run() {
 
   const sendTx = async (id: number) => {
     let retries = 0;
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 10;
+    let lastError = "Timeout after retries";
 
     try {
       while (retries < MAX_RETRIES) {
@@ -193,6 +194,10 @@ async function run() {
            return;
         }
       }
+      
+      // If we reach here, it means the retry loop finished without a success/return
+      failed++;
+      rawLogs.push({ id, status: "FAILED", error: "Exhausted all retries. Final attempt failed.", timestamp: new Date().toISOString() });
     } finally {
       // Only increment completion once the transaction id is fully processed
       completed++;
