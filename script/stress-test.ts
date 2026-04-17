@@ -23,10 +23,29 @@ async function run() {
     process.exit(1);
   }
 
-  const [username, password, recipientAddress, totalTxsStr, threadsStr, targetUrlOpt] = args;
+  const [username, password, rawRecipient, totalTxsStr, threadsStr, targetUrlOpt] = args;
   const TOTAL_TXS = parseInt(totalTxsStr, 10);
   const THREADS = parseInt(threadsStr, 10);
   const BASE_URL = targetUrlOpt || "http://localhost:5000";
+
+  let recipientAddress = rawRecipient;
+  if (!recipientAddress.startsWith("WEBD$")) {
+     console.log(`[0] Resolving Alias '${rawRecipient}' to Wallet Address...`);
+     try {
+       const resolveRes = await fetch(`${BASE_URL}/api/wallet/resolve-alias/${rawRecipient}`);
+       if (resolveRes.ok) {
+          const data = await resolveRes.json();
+          recipientAddress = data.address;
+          console.log(`    Resolved to: ${recipientAddress}`);
+       } else {
+          console.error(`❌ Alias resolution failed! Ensure '${rawRecipient}' is a valid user.`);
+          process.exit(1);
+       }
+     } catch (e) {
+       console.error("❌ Network error resolving Alias.");
+       process.exit(1);
+     }
+  }
 
   console.log(`\n🚀 INITIATING WEBDOLLAR 2 PERFORMANCE STRESS TEST`);
   console.log(`====================================================`);
