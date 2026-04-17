@@ -32,7 +32,7 @@ async function run() {
   if (!recipientAddress.startsWith("WEBD$")) {
      console.log(`[0] Resolving Alias '${rawRecipient}' to Wallet Address...`);
      try {
-       const resolveRes = await fetch(`${BASE_URL}/api/wallet/resolve-alias/${rawRecipient}`);
+       const resolveRes = await fetch(`${BASE_URL}/api/alias/resolve/${rawRecipient}`);
        if (resolveRes.ok) {
           const data = await resolveRes.json();
           recipientAddress = data.address;
