@@ -134,71 +134,73 @@ async function run() {
     let retries = 0;
     const MAX_RETRIES = 3;
 
-    while (retries < MAX_RETRIES) {
-      const txNonce = syncedNonce++; 
-      const txStart = Date.now();
-      
-      try {
-        const amount = "0.0001";
-        const messageStr = JSON.stringify({ recipientAddress, amount, nonce: txNonce });
-        const hashBuffer = crypto.createHash("sha256").update(messageStr).digest();
-        const sigBytes = await signAsync(new Uint8Array(hashBuffer), privateKeyBytes, { prehash: false });
-        const signature = Array.from(sigBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-
-        const res = await fetch(`${BASE_URL}/api/wallet/transfer`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Cookie': cookie 
-          },
-          body: JSON.stringify({
-            recipientAddress,
-            amount,
-            signature,
-            nonce: txNonce
-          })
-        });
-
-        const latency = Date.now() - txStart;
+    try {
+      while (retries < MAX_RETRIES) {
+        const txNonce = syncedNonce++; 
+        const txStart = Date.now();
         
-        if (res.ok) {
-          latencies.push(latency);
-          success++;
-          rawLogs.push({ id, status: "SUCCESS", latency_ms: latency, timestamp: new Date().toISOString() });
-          return; // Success!
-        } else {
-          const errorText = await res.text();
+        try {
+          const amount = "0.0001";
+          const messageStr = JSON.stringify({ recipientAddress, amount, nonce: txNonce });
+          const hashBuffer = crypto.createHash("sha256").update(messageStr).digest();
+          const sigBytes = await signAsync(new Uint8Array(hashBuffer), privateKeyBytes, { prehash: false });
+          const signature = Array.from(sigBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
+          const res = await fetch(`${BASE_URL}/api/wallet/transfer`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Cookie': cookie 
+            },
+            body: JSON.stringify({
+              recipientAddress,
+              amount,
+              signature,
+              nonce: txNonce
+            })
+          });
+
+          const latency = Date.now() - txStart;
           
-          // If it's a nonce error, we resync and retry
-          if (errorText.includes("Invalid network nonce") || errorText.includes("Consensus Override")) {
-              const match = errorText.match(/Expected (\d+)/);
-              if (match) {
-                 syncedNonce = parseInt(match[1], 10);
-                 retries++;
-                 continue; // Retry with the correct nonce
-              }
+          if (res.ok) {
+            latencies.push(latency);
+            success++;
+            rawLogs.push({ id, status: "SUCCESS", latency_ms: latency, timestamp: new Date().toISOString() });
+            return; // Success!
+          } else {
+            const errorText = await res.text();
+            
+            // If it's a nonce error, we resync and retry
+            if (errorText.includes("Invalid network nonce") || errorText.includes("Consensus Override")) {
+                const match = errorText.match(/Expected (\d+)/);
+                if (match) {
+                   syncedNonce = parseInt(match[1], 10);
+                   retries++;
+                   continue; // Retry with the correct nonce
+                }
+            }
+            
+            // If it's a different error or we ran out of retries
+            latencies.push(latency);
+            failed++;
+            rawLogs.push({ id, status: "FAILED", latency_ms: latency, error: errorText, timestamp: new Date().toISOString() });
+            return;
           }
-          
-          // If it's a different error or we ran out of retries
-          latencies.push(latency);
-          failed++;
-          rawLogs.push({ id, status: "FAILED", latency_ms: latency, error: errorText, timestamp: new Date().toISOString() });
-          return;
+        } catch (e: any) {
+           const latency = Date.now() - txStart;
+           latencies.push(latency);
+           rawLogs.push({ id, status: "ERROR", latency_ms: latency, error: e.message, timestamp: new Date().toISOString() });
+           return;
         }
-      } catch (e: any) {
-         const latency = Date.now() - txStart;
-         latencies.push(latency);
-        rawLogs.push({ id, status: "ERROR", latency_ms: latency, error: e.message, timestamp: new Date().toISOString() });
-         return;
       }
-    }
-    
-    // Only increment completion once the transaction id is fully processed (success or final failure)
-    completed++;
-    if (completed % 10 === 0 || completed === TOTAL_TXS) {
-      const progressPercent = ((completed/TOTAL_TXS)*100).toFixed(1);
-      const successStatus = success;
-      process.stdout.write(`\rProgress: ${completed}/${TOTAL_TXS} (${progressPercent}%) | Success: ${successStatus} | Failed: ${failed}    `);
+    } finally {
+      // Only increment completion once the transaction id is fully processed
+      completed++;
+      if (completed % 10 === 0 || completed === TOTAL_TXS) {
+        const progressPercent = ((completed/TOTAL_TXS)*100).toFixed(1);
+        const successStatus = success;
+        process.stdout.write(`\rProgress: ${completed}/${TOTAL_TXS} (${progressPercent}%) | Success: ${successStatus} | Failed: ${failed}    `);
+      }
     }
   };
 
