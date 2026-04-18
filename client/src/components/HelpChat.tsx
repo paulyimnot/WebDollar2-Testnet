@@ -115,7 +115,7 @@ export function HelpChat() {
       <div
         className={cn(
           "fixed bottom-4 right-4 z-50 flex flex-col transition-all duration-300",
-          isOpen ? "w-[380px] h-[520px] max-h-[80vh]" : "w-auto h-auto"
+          isOpen ? "w-[calc(100vw-32px)] sm:w-[380px] h-[520px] max-h-[80vh]" : "w-auto h-auto"
         )}
         data-testid="help-chat-container"
       >
