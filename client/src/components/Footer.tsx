@@ -12,7 +12,8 @@ export function Footer() {
 
         <div className="flex flex-wrap gap-6 justify-center">
           <Link href="/protocol"><a className="hover:text-primary transition-colors cursor-pointer" data-testid="link-protocol">PROTOCOL HUB</a></Link>
-          <a href="https://webdollar.io/public/doc/WebDollar-White-Paper.pdf" target="_blank" className="hover:text-primary transition-colors" data-testid="link-whitepaper">WHITEPAPER</a>
+          <Link href="/whitepaper"><a className="hover:text-primary transition-colors cursor-pointer" data-testid="link-whitepaper">WHITEPAPER</a></Link>
+          <Link href="/blackpaper"><a className="hover:text-primary transition-colors cursor-pointer" data-testid="link-blackpaper">BLACKPAPER</a></Link>
           <a href="https://github.com/WebDollar/Node-WebDollar" target="_blank" className="hover:text-primary transition-colors" data-testid="link-github">GITHUB</a>
         </div>
 
