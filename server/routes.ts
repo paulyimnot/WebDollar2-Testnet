@@ -2552,42 +2552,47 @@ If you don't know something, say so honestly. Do not make up information. Keep a
       // Leader Election logic: Default to true unless explicitly disabled for RPC nodes
       if (process.env.IS_BLOCK_PRODUCER === "false") return;
       
-      // CRITICAL: Force refresh from DB to prevent split-brain/forking during parallel deployments
-      const latest = await storage.getLatestBlock(true); 
-      const nextId = (latest?.id || 0) + 1;
-      const prevHash = latest?.hash || "0x00000000000000000000000000000000GENESIS_BLOCK_WD2_PROTOCOL_V2";
-      
-      // Seed a semi-random hash for the new block
-      // 🛡️ SECURITY: Use the official previous hash as the basis for the new block's identity
-      const newHash = createHash("sha256").update(prevHash + (latest?.id ? latest.id : 0) + nextId).digest("hex");
-      
-      // 🛡️ THE HYBRID QUORUM: Request mathematical signatures from active browsers
-      broadcastQuorumVoteRequest(newHash);
-      
-      // Wait exactly 2.0 seconds to collect signatures from the WebMesh before sealing the block
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Tally the Decentralized Signatures. If 0 (empty room), we fallback to Origin 1 to preserve liveness.
-      const collectedSignatures = activeQuorumVotes.get(newHash) || 0;
-      const hybridSignatures = Math.max(1, collectedSignatures);
-      
-      const rewardAmount = getCurrentBlockReward(nextId);
-      
-      await storage.createBlock({
-        hash: newHash,
-        previousHash: prevHash,
-        minerId: null, // System generated block for Testnet stability
-        reward: rewardAmount.toFixed(4),
-        difficulty: 1,
-        nonce: hybridSignatures // On Testnet, we re-purpose the nonce field to publicly record Quorum Signature Count!
+      // 🛡️ ATOMIC BLOCK PRODUCTION: Use a transaction + FOR UPDATE lock to prevent forks
+      await db.transaction(async (tx) => {
+        // We bypass the storage abstraction here to ensure we are in the SAME transaction
+        const result = await tx.execute(sql`SELECT * FROM blocks ORDER BY id DESC LIMIT 1 FOR UPDATE`);
+        const latest = result.rows[0] as unknown as Block | undefined;
+        
+        const nextId = (latest?.id || 0) + 1;
+        const prevHash = latest?.hash || "0x00000000000000000000000000000000GENESIS_BLOCK_WD2_PROTOCOL_V2";
+        
+        // Seed a semi-random hash for the new block
+        const newHash = createHash("sha256").update(prevHash + (latest?.id ? latest.id : 0) + nextId).digest("hex");
+        
+        // 🛡️ THE HYBRID QUORUM: Request mathematical signatures from active browsers
+        broadcastQuorumVoteRequest(newHash);
+        
+        // Wait exactly 2.0 seconds to collect signatures from the WebMesh before sealing the block
+        // NOTE: We hold the DB lock during this wait to prevent other producers from racing.
+        // In a high-traffic system this would be optimized, but for 5s blocks it's perfectly safe.
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Tally the Decentralized Signatures.
+        const collectedSignatures = activeQuorumVotes.get(newHash) || 0;
+        const hybridSignatures = Math.max(1, collectedSignatures);
+        const rewardAmount = getCurrentBlockReward(nextId);
+        
+        await tx.insert(blocks).values({
+          hash: newHash,
+          previousHash: prevHash,
+          minerId: null,
+          reward: rewardAmount.toFixed(4),
+          difficulty: 1,
+          nonce: hybridSignatures
+        });
+        
+        // Clean up
+        activeQuorumVotes.delete(newHash);
+        
+        if (nextId % 100 === 0) {
+          console.log(`[DIELBS] Produced Block #${nextId} | Rewards Pool: ${rewardAmount.toFixed(2)} WEBD2 | Signatures: ${hybridSignatures}`);
+        }
       });
-      
-      // Clean up the memory map so it doesn't leak
-      activeQuorumVotes.delete(newHash);
-      
-      if (nextId % 100 === 0) {
-        console.log(`[DIELBS] Produced Block #${nextId} | Rewards Pool: ${rewardAmount.toFixed(2)} WEBD2 | Signatures: ${hybridSignatures}`);
-      }
 
       // === STAKING REWARD DISTRIBUTION (PROOF OF PRESENCE) ===
       try {

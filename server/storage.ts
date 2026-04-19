@@ -187,6 +187,23 @@ export class DatabaseStorage implements IStorage {
     return block;
   }
 
+  async getLatestBlockWithLock(): Promise<Block | undefined> {
+    // We use a raw SQL query to apply the 'FOR UPDATE' lock
+    const result = await db.execute(sql`
+      SELECT * FROM blocks 
+      ORDER BY id DESC 
+      LIMIT 1 
+      FOR UPDATE
+    `);
+    
+    if (result.rows.length === 0) return undefined;
+    
+    const block = result.rows[0] as unknown as Block;
+    // Update cache while we're at it
+    this.cachedLatestBlock = { value: block, timestamp: Date.now() };
+    return block;
+  }
+
   async getBlocks(limit = 10): Promise<Block[]> {
     return await db.select().from(blocks).orderBy(desc(blocks.id)).limit(limit);
   }
