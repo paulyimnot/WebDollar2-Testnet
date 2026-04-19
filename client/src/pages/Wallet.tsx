@@ -151,8 +151,8 @@ export default function Wallet() {
       queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
       toast({ title: "TESTNET FAUCET", description: `+${data.amount.toLocaleString()} WD2 claimed successfully!`, className: "border-accent text-accent bg-black font-mono" });
     },
-    onError: () => {
-      toast({ title: "ERROR", description: "Could not claim faucet.", variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "ERROR", description: error.message || "Could not claim faucet.", variant: "destructive" });
     }
   });
 

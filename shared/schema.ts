@@ -106,7 +106,7 @@ export const transactions = pgTable("transactions", {
   senderAddress: text("sender_address"),
   receiverAddress: text("receiver_address"),
   amount: numeric("amount", { precision: 20, scale: 4 }).notNull(),
-  type: text("type", { enum: ["transfer", "mining_reward", "staking_reward", "conversion", "fee", "purchase"] }).notNull(),
+  type: text("type", { enum: ["transfer", "mining_reward", "staking_reward", "conversion", "fee", "purchase", "faucet_reward"] }).notNull(),
   blockId: integer("block_id").references(() => blocks.id),
   timestamp: timestamp("timestamp").defaultNow(),
 });
