@@ -22,6 +22,8 @@ export const users = pgTable("users", {
   currentSessionId: text("current_session_id"),
   nonce: integer("nonce").default(0).notNull(),
   isBackbone: boolean("is_backbone").default(false),
+  totalRewardsEarned: numeric("total_rewards_earned", { precision: 20, scale: 4 }).default("0"),
+  lastRewardAmount: numeric("last_reward_amount", { precision: 20, scale: 4 }).default("0"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

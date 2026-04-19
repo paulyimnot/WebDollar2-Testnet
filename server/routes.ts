@@ -1339,12 +1339,11 @@ export async function registerRoutes(
     const infoApy = calculateNetworkAPY(totalStakedNum, currentHeight);
     const infoTotalMinedStr = await storage.getTotalMinedSupply();
     const infoTotalMined = parseFloat(infoTotalMinedStr);
-
-    // Calculate total rewards ever earned by this user using efficient aggregation
-    const rewardStats = await storage.getUserRewardStats(user.id);
-    const totalRewardsEarned = rewardStats.totalRewardsEarned;
-    const lastRewardAmount = rewardStats.lastRewardAmount;
-    const rewardsCount = rewardStats.rewardsCount;
+    
+    // Use high-performance cached values from the user record
+    const totalRewardsEarned = user.totalRewardsEarned || "0";
+    const lastRewardAmount = user.lastRewardAmount || "0";
+    const rewardsCount = 0; // Legacy field, ignored for performance
 
     res.json({
       stakedBalance: userStaked.toFixed(4),

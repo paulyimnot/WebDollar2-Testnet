@@ -210,6 +210,17 @@ export class DatabaseStorage implements IStorage {
 
   async createTransaction(tx: Omit<Transaction, "id" | "timestamp">): Promise<Transaction> {
     const [newTx] = await db.insert(transactions).values(tx).returning();
+    
+    // Update Cached Rewards on the User table for high-performance reading
+    if (newTx.receiverId && ["staking_reward", "mining_reward", "faucet_reward"].includes(newTx.type)) {
+      await db.update(users)
+        .set({
+          totalRewardsEarned: sql`total_rewards_earned::numeric + ${newTx.amount}::numeric`,
+          lastRewardAmount: newTx.amount
+        })
+        .where(eq(users.id, newTx.receiverId));
+    }
+    
     return newTx;
   }
 
