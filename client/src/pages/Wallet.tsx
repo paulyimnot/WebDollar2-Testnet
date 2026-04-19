@@ -336,20 +336,32 @@ export default function Wallet() {
       </div>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-4">
         <h2 className="text-3xl font-heading text-accent border-l-4 border-accent pl-4" data-testid="text-addresses-title">WALLET ADDRESSES</h2>
-        <Button
-          onClick={() => {
-            const password = window.prompt("Enter your password to secure the new address:");
-            if (!password) return;
-            const label = window.prompt("Label for this address (optional):") || "Secondary Wallet";
-            createAddress({ label, password });
-          }}
-          disabled={isCreating}
-          className="btn-gold shrink-0 w-full md:w-auto py-4 h-10 text-sm font-black tracking-widest"
-          data-testid="button-create-address"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          {isCreating ? "GENERATING..." : "NEW ADDRESS"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <Button
+            onClick={() => faucetMutation.mutate()}
+            disabled={faucetMutation.isPending}
+            variant="outline"
+            className="border-accent/40 text-accent hover:bg-accent/10 font-black tracking-widest text-xs h-10 px-6 shrink-0"
+            data-testid="button-faucet-claim"
+          >
+            {faucetMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+            CLAIM FAUCET
+          </Button>
+          <Button
+            onClick={() => {
+              const password = window.prompt("Enter your password to secure the new address:");
+              if (!password) return;
+              const label = window.prompt("Label for this address (optional):") || "Secondary Wallet";
+              createAddress({ label, password });
+            }}
+            disabled={isCreating}
+            className="btn-gold shrink-0 py-4 h-10 text-sm font-black tracking-widest"
+            data-testid="button-create-address"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {isCreating ? "GENERATING..." : "NEW ADDRESS"}
+          </Button>
+        </div>
       </div>
       <div className="space-y-4">
         {addresses?.map((addr: any) => (

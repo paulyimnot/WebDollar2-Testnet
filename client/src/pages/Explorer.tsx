@@ -249,6 +249,8 @@ export default function Explorer() {
                     <td className="py-3 px-2">
                       <span className={`px-2 py-0.5 text-[9px] font-black uppercase border rounded-sm ${
                         tx.type === 'mining_reward' ? 'border-accent text-accent' :
+                        tx.type === 'faucet_reward' ? 'border-blue-400 text-blue-400' :
+                        tx.type === 'staking_reward' ? 'border-green-400 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.2)]' :
                         tx.type === 'conversion' ? 'border-yellow-500 text-yellow-500' :
                         'border-primary text-primary'
                       }`}>

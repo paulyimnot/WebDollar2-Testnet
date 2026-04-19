@@ -939,6 +939,52 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/wallet/testnet-faucet", async (req, res) => {
+    // @ts-ignore
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "Join the network to use the faucet." });
+
+    const { challenge, nonce } = req.body;
+    if (!challenge || !nonce) return res.status(400).json({ message: "PoW Proof Required." });
+
+    // Verify PoW (Difficulty: "000")
+    const data = String(userId) + challenge + String(nonce);
+    const hash = createHash("sha256").update(data).digest("hex");
+    
+    if (!hash.startsWith("000")) {
+      return res.status(400).json({ message: "PoW Verification Failed. Use a modern browser." });
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user || !user.walletAddress) return res.status(400).json({ message: "Identity not found." });
+
+    const primaryWallet = await storage.getWalletAddressByAddress(user.walletAddress);
+    if (!primaryWallet) return res.status(400).json({ message: "Primary wallet link broken." });
+
+    const faucetAmount = 10000;
+    
+    try {
+        await storage.updateAddressBalance(primaryWallet.id, (parseFloat(primaryWallet.balance || "0") + faucetAmount).toString());
+        // Record as a system transaction
+        await storage.createTransaction({
+            senderId: 0, // System
+            recipientId: userId,
+            senderAddressId: null,
+            recipientAddressId: primaryWallet.id,
+            amount: faucetAmount.toString(),
+            senderAddress: "WEBDOLLAR2_FAUCET",
+            recipientAddress: user.walletAddress,
+            type: "faucet_reward",
+            status: "completed",
+            timestamp: new Date()
+        });
+        
+        res.json({ message: "10,000 WD2 Credited", amount: faucetAmount });
+    } catch (e: any) {
+        res.status(500).json({ message: "Faucet dry. Try again later." });
+    }
+  });
+
   // Private transactions use the same transfer logic but are not publicly visible in the explorer
   app.post("/api/wallet/transfer/private", async (req, res) => {
     // @ts-ignore
