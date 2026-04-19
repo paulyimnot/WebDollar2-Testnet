@@ -2549,27 +2549,22 @@ If you don't know something, say so honestly. Do not make up information. Keep a
   // Other servers act as high-speed RPC/P2P relays for immediate scaling.
   setInterval(async () => {
     try {
-      // Leader Election logic: Default to true unless explicitly disabled for RPC nodes
+      // Leader Election logic
       if (process.env.IS_BLOCK_PRODUCER === "false") return;
       
-      // 🛡️ ATOMIC BLOCK PRODUCTION: Use a transaction + FOR UPDATE lock to prevent forks
-      await db.transaction(async (tx) => {
-        // We bypass the storage abstraction here to ensure we are in the SAME transaction
-        const result = await tx.execute(sql`SELECT * FROM blocks ORDER BY id DESC LIMIT 1 FOR UPDATE`);
-        const latest = result.rows[0] as unknown as Block | undefined;
+      try {
+        // 1. Get the current state to know what we are signing
+        const latestInfo = await storage.getLatestBlock(true);
+        const nextId = (latestInfo?.id || 0) + 1;
+        const prevHash = latestInfo?.hash || "0x00000000000000000000000000000000GENESIS_BLOCK_WD2_PROTOCOL_V2";
         
-        const nextId = (latest?.id || 0) + 1;
-        const prevHash = latest?.hash || "0x00000000000000000000000000000000GENESIS_BLOCK_WD2_PROTOCOL_V2";
-        
-        // Seed a semi-random hash for the new block
-        const newHash = createHash("sha256").update(prevHash + (latest?.id ? latest.id : 0) + nextId).digest("hex");
+        // Seed the hash for the next block
+        const newHash = createHash("sha256").update(prevHash + (latestInfo?.id ? latestInfo.id : 0) + nextId).digest("hex");
         
         // 🛡️ THE HYBRID QUORUM: Request mathematical signatures from active browsers
         broadcastQuorumVoteRequest(newHash);
         
-        // Wait exactly 2.0 seconds to collect signatures from the WebMesh before sealing the block
-        // NOTE: We hold the DB lock during this wait to prevent other producers from racing.
-        // In a high-traffic system this would be optimized, but for 5s blocks it's perfectly safe.
+        // ⏳ Wait 2.0 seconds (OUTSIDE of transaction) to collect signatures
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Tally the Decentralized Signatures.
@@ -2577,22 +2572,39 @@ If you don't know something, say so honestly. Do not make up information. Keep a
         const hybridSignatures = Math.max(1, collectedSignatures);
         const rewardAmount = getCurrentBlockReward(nextId);
         
-        await tx.insert(blocks).values({
-          hash: newHash,
-          previousHash: prevHash,
-          minerId: null,
-          reward: rewardAmount.toFixed(4),
-          difficulty: 1,
-          nonce: hybridSignatures
+        // 🛡️ ATOMIC COMMIT: Open transaction ONLY for the final check and insert
+        await db.transaction(async (tx) => {
+          // Re-verify latest block WITHIN transaction to prevent race conditions
+          const result = await tx.execute(sql`SELECT * FROM blocks ORDER BY id DESC LIMIT 1 FOR UPDATE`);
+          const latest = result.rows[0] as unknown as Block | undefined;
+          
+          const actualPrevHash = latest?.hash || "0x00000000000000000000000000000000GENESIS_BLOCK_WD2_PROTOCOL_V2";
+          const finalNextId = (latest?.id || 0) + 1;
+          
+          // Re-derive hash if the parent changed while we were waiting (Self-healing)
+          const finalHash = (actualPrevHash === prevHash) ? newHash : 
+                            createHash("sha256").update(actualPrevHash + (latest?.id ? latest.id : 0) + finalNextId).digest("hex");
+
+          await tx.insert(blocks).values({
+            hash: finalHash,
+            previousHash: actualPrevHash,
+            minerId: null,
+            reward: rewardAmount.toFixed(4),
+            difficulty: 1,
+            nonce: hybridSignatures
+          });
+          
+          if (finalNextId % 100 === 0) {
+            console.log(`[DIELBS] Produced Block #${finalNextId} | Signatures: ${hybridSignatures}`);
+          }
         });
         
         // Clean up
         activeQuorumVotes.delete(newHash);
         
-        if (nextId % 100 === 0) {
-          console.log(`[DIELBS] Produced Block #${nextId} | Rewards Pool: ${rewardAmount.toFixed(2)} WEBD2 | Signatures: ${hybridSignatures}`);
-        }
-      });
+      } catch (prodErr) {
+        console.error("[DIELBS] Block production aborted due to race or error:", prodErr);
+      }
 
       // === STAKING REWARD DISTRIBUTION (PROOF OF PRESENCE) ===
       try {
