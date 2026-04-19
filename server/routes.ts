@@ -98,13 +98,13 @@ export async function registerRoutes(
   }
 
   app.use(session({
-    secret: process.env.SESSION_SECRET!, 
+    secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
     name: 'wd2_session',
     cookie: {
       // 🛡️ SECURITY FIX: Removed 30-day maxAge. Now a strict "Session" cookie that deletes when the browser closes.
-      secure: process.env.NODE_ENV === "production", 
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite: 'lax',
     },
@@ -138,9 +138,9 @@ export async function registerRoutes(
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
     try {
       const { isBackbone } = req.body;
-      const user = await storage.updateUser(req.session.userId, { 
+      const user = await storage.updateUser(req.session.userId, {
         lastActive: new Date(),
-        isBackbone: !!isBackbone 
+        isBackbone: !!isBackbone
       });
       res.json(user);
     } catch (e) {
@@ -150,11 +150,11 @@ export async function registerRoutes(
 
   // === Auth Routes ===
   // Persistent anti-Sybil protection relocated to DB (registration_ip_log)
-  
+
   app.post(api.auth.register.path, async (req, res) => {
     try {
       const ip = req.ip || req.socket?.remoteAddress || "unknown_ip";
-      
+
       // 0. GLOBAL IP BLACKLIST CHECK
       const isBanned = await db.execute(sql`SELECT id FROM banned_ips WHERE ip = ${ip}`);
       if (isBanned.rows.length > 0) {
@@ -250,7 +250,7 @@ export async function registerRoutes(
 
       const rawTrimmed = rawUsername.trim();
       const sanitized = sanitizeUsername(rawTrimmed);
-      
+
       let user = await storage.getUserByUsername(rawTrimmed); // Exact match first (Legacy support)
       if (!user) {
         user = await storage.getUserByUsername(sanitized); // Sanitized match (New users)
@@ -259,7 +259,7 @@ export async function registerRoutes(
         // Final fallback: Case-insensitive match on the raw username
         const fallbackResult = await db.execute(sql`SELECT * FROM users WHERE username ILIKE ${rawTrimmed} LIMIT 1`);
         if (fallbackResult.rows.length > 0) {
-           user = fallbackResult.rows[0] as any;
+          user = fallbackResult.rows[0] as any;
         }
       }
 
@@ -390,12 +390,12 @@ export async function registerRoutes(
 
     const keys = deriveKeyPair(trimmedPhrase);
     const newEncKey = encryptPrivateKey(keys.privateKey, newPassword);
-    
+
     // Always re-encrypt the primary wallet associated with this seed phrase
-    await storage.updateWalletAddress(primaryAddr.id, { 
-        encryptedPrivateKey: newEncKey, 
-        isLocked: false, 
-        mnemonic: trimmedPhrase 
+    await storage.updateWalletAddress(primaryAddr.id, {
+      encryptedPrivateKey: newEncKey,
+      isLocked: false,
+      mnemonic: trimmedPhrase
     });
 
     res.json({ message: "Password reset sequence complete. Primary wallet re-encrypted and secured with your new credentials." });
@@ -576,47 +576,47 @@ export async function registerRoutes(
   app.get('/api/alias/resolve/:username', async (req, res) => {
     const { username: rawLookup } = req.params;
     const lookup = rawLookup.trim();
-    
+
     // Step 1: Try resolving by custom alias first (Case-Insensitive)
     const aliasResult = await db.execute(sql`SELECT * FROM users WHERE alias ILIKE ${lookup} LIMIT 1`);
     const aliasUser = aliasResult.rows[0] as any;
-    
+
     if (aliasUser && aliasUser.wallet_address) {
-      return res.json({ 
-        address: aliasUser.wallet_address, 
+      return res.json({
+        address: aliasUser.wallet_address,
         username: aliasUser.is_alias_active ? (aliasUser.alias || aliasUser.username) : "Anonymous Wallet"
       });
     }
-    
+
     // Step 2: Fallback to username lookup (Case-Insensitive)
     const userResult = await db.execute(sql`SELECT * FROM users WHERE username ILIKE ${lookup} LIMIT 1`);
-    
+
     if (userResult.rows.length === 0 || !(userResult.rows[0] as any).wallet_address) {
       return res.status(404).json({ message: "Alias or username not found on the network." });
     }
 
     const userByName = userResult.rows[0] as any;
-    
+
     // Security: If this user HAS a custom alias set, don't allow resolution by raw username
     if (userByName.alias && userByName.alias.length > 0) {
       return res.status(404).json({ message: "This user has a custom alias configured. Please use their alias to send funds." });
     }
-    
+
     res.json({ address: userByName.wallet_address, username: userByName.username });
   });
 
   app.post('/api/alias/update', async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
-    
+
     // @ts-ignore
     const user = await storage.getUser(req.session.userId);
     if (!user) return res.status(401).json({ message: "User not found" });
 
     const { alias, isAliasActive } = req.body;
-    
+
     let sanitizedAlias = null;
-    
+
     if (alias) {
       // REQUIREMENT: Enforce "@WEBD2" suffix and capitalization
       // Input can be "Sample" or "Sample@WEBD2"
@@ -634,23 +634,23 @@ export async function registerRoutes(
       if (lowerAlias === user.username.toLowerCase()) {
         return res.status(400).json({ message: "For security, your alias cannot be the same as your username." });
       }
-      
+
       if (lowerAlias.length < 3) {
         return res.status(400).json({ message: "Alias must be at least 3 characters." });
       }
 
       // Final alias format: Sample@WEBD2
       sanitizedAlias = `${rawAlias}@WEBD2`;
-      
+
       const existing = await storage.getUserByAlias(sanitizedAlias);
       if (existing && existing.id !== user.id) {
-         return res.status(400).json({ message: "This alias is already taken by someone else." });
+        return res.status(400).json({ message: "This alias is already taken by someone else." });
       }
-      
+
       // Also check if anyone else has this as a base username (case insensitive)
       const existingUsername = await storage.getUserByUsername(lowerAlias);
       if (existingUsername && existingUsername.id !== user.id) {
-         return res.status(400).json({ message: "This alias base is already registered as a username. Choose something unique." });
+        return res.status(400).json({ message: "This alias base is already registered as a username. Choose something unique." });
       }
     }
 
@@ -769,7 +769,7 @@ export async function registerRoutes(
       console.log(`[Self-Healing] User ${user?.username} has no wallet addresses. Creating primary...`);
       const wallet = generateWallet();
       const encryptedKey = encryptPrivateKey(wallet.privateKey, "default_enc"); // In a real production this should be based on login secret
-      
+
       const addr = await storage.createWalletAddress({
         userId,
         label: "Primary Wallet",
@@ -788,7 +788,7 @@ export async function registerRoutes(
         // I'll add a database update directly.
         await db.update(users).set({ walletAddress: wallet.address }).where(eq(users.id, userId));
       }
-      
+
       // Re-fetch user to get the updated wallet information
       const updatedUser = await storage.getUser(userId);
       const { password: _, ...safeUser } = updatedUser!;
@@ -891,12 +891,12 @@ export async function registerRoutes(
     // We need the public key associated with the sender's current wallet
     const senderWallet = await storage.getWalletAddressByAddress(sender.walletAddress!);
     if (!senderWallet || !senderWallet.publicKey) {
-       return res.status(400).json({ message: "Sender public key not found on network." });
+      return res.status(400).json({ message: "Sender public key not found on network." });
     }
 
     const message = JSON.stringify({ recipientAddress: recipientAddress.trim(), amount: amountNum.toString(), nonce });
     const isValid = verifySignature(message, signature, senderWallet.publicKey);
-    
+
     if (!isValid) {
       console.error(`[SECURITY] Signature verification failed for User ${sender.username}`);
       return res.status(400).json({ message: "Invalid transaction signature. Security rejection." });
@@ -935,7 +935,7 @@ export async function registerRoutes(
         nonce
       );
       const currentLat = Math.round(performance.now() - startTime);
-      
+
       // Update moving average
       latencyHistory.push(currentLat);
       if (latencyHistory.length > 5) latencyHistory.shift();
@@ -1045,14 +1045,14 @@ export async function registerRoutes(
 
   // === Testnet Faucet ===
   // Persistent 24h cooldown relocated to DB (faucet_claim_log)
-   app.post("/api/wallet/testnet-faucet", async (req, res) => {
+  app.post("/api/wallet/testnet-faucet", async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
 
     if (isBlockchainPaused) {
       return res.status(503).json({ message: "Network is currently paused for maintenance. Please try again later." });
     }
-    
+
     try {
       const { challenge, nonce } = req.body;
       const clientIp = req.ip || req.socket?.remoteAddress || "unknown_ip";
@@ -1066,7 +1066,7 @@ export async function registerRoutes(
       if (!hash.startsWith("000")) {
         return res.status(400).json({ message: "Invalid mining proof. CPU effort verification failed." });
       }
-      
+
       // 0. GLOBAL IP BLACKLIST CHECK
       const isBanned = await db.execute(sql`SELECT id FROM banned_ips WHERE ip = ${clientIp}`);
       if (isBanned.rows.length > 0) {
@@ -1076,12 +1076,12 @@ export async function registerRoutes(
       // 1. PERSISTENT IP LOCKOUT (Faucet)
       const existingClaim = await db.execute(sql`SELECT last_claim_at FROM faucet_claim_log WHERE ip = ${clientIp}`);
       if (existingClaim.rows.length > 0) {
-          const lastClaim = new Date(existingClaim.rows[0].last_claim_at as string).getTime();
-          if (Date.now() - lastClaim < 24 * 60 * 60 * 1000) {
-             return res.status(429).json({ message: "Network Limit: Your IP address has already claimed the Faucet today. Strict 1 claim per household router or device allows." });
-          }
+        const lastClaim = new Date(existingClaim.rows[0].last_claim_at as string).getTime();
+        if (Date.now() - lastClaim < 24 * 60 * 60 * 1000) {
+          return res.status(429).json({ message: "Network Limit: Your IP address has already claimed the Faucet today. Strict 1 claim per household router or device allows." });
+        }
       }
-        // @ts-ignore
+      // @ts-ignore
       const user = await storage.getUser(req.session.userId);
       if (!user) return res.status(401).json({ message: "User not found" });
 
@@ -1104,16 +1104,16 @@ export async function registerRoutes(
       const currentBalance = parseFloat(user.balance || "0");
       // Balance update deferred to sync with primary wallet below
       const newBalance = (currentBalance + addedAmount).toFixed(4);
-      
+
       // Log persistent IP timestamp for 24h lockout
       if (clientIp !== "unknown_ip") {
-          await db.execute(sql`
+        await db.execute(sql`
             INSERT INTO faucet_claim_log (ip, wallet_address, last_claim_at) 
             VALUES (${clientIp}, ${user.walletAddress || "N/A"}, NOW())
             ON CONFLICT (ip) DO UPDATE SET last_claim_at = NOW()
           `);
       }
-      
+
       // specifically add to their primary wallet address balance as well
       const primaryAddrQuery = await storage.getWalletAddresses(user.id);
       const primaryAddr = primaryAddrQuery.find(a => a.isPrimary);
@@ -1121,7 +1121,7 @@ export async function registerRoutes(
         const addrCurrent = parseFloat(primaryAddr.balance || "0");
         const newAddrBalance = (addrCurrent + addedAmount).toFixed(4);
         await storage.updateWalletAddressBalance(primaryAddr.id, newAddrBalance);
-        
+
         // Also update the global user balance to match
         await storage.updateUserBalance(user.id, newAddrBalance);
       } else {
@@ -1135,7 +1135,7 @@ export async function registerRoutes(
         senderAddress: "FAUCET_TESTNET",
         receiverAddress: user.walletAddress,
         amount: addedAmount.toFixed(4),
-        type: "faucet_reward", 
+        type: "faucet_reward",
         blockId: null
       });
 
@@ -1186,33 +1186,33 @@ export async function registerRoutes(
    * Logic: (User Staked / Total Network Staked) * Emission Rate per Slot
    */
   function calculateDIELBSParticipationRewards(
-    userStaked: number, 
-    totalNetworkStaked: number, 
+    userStaked: number,
+    totalNetworkStaked: number,
     lastClaimTime: Date | string | null,
     currentHeight: number
   ): number {
     if (userStaked <= 0 || totalNetworkStaked <= 0) return 0;
-    
+
     const now = Date.now();
     const lastClaim = lastClaimTime ? new Date(lastClaimTime).getTime() : now;
-    
+
     // Safety check for invalid dates
     if (isNaN(lastClaim)) return 0;
-    
+
     const elapsedSeconds = Math.max(0, (now - lastClaim) / 1000);
-    
+
     // Liveness Threshold: Rewards only accrue during active socket/tab presence (30s window)
     const LIVENESS_THRESHOLD_SECONDS = 30;
     const effectiveElapsed = Math.min(elapsedSeconds, LIVENESS_THRESHOLD_SECONDS);
-    
+
     // Calculate slots participated (1 slot = 5 seconds)
     const rewardPeriods = effectiveElapsed / REWARD_INTERVAL_SECONDS;
-    
+
     // Weighted share of the current reward rate based on halving era
     const currentRate = getCurrentBlockReward(currentHeight);
     const userShare = userStaked / totalNetworkStaked;
     const cumulativeReward = userShare * currentRate * rewardPeriods;
-    
+
     // Return high-precision floor to prevent floating point drift
     return Math.max(0, parseFloat(cumulativeReward.toFixed(8)));
   }
@@ -1283,7 +1283,7 @@ export async function registerRoutes(
     // === DIELBS CONSENSUS AUTO-CLAIM ===
     const latestBlock = await storage.getLatestBlock();
     const currentHeight = latestBlock?.id || 0;
-    
+
     let pendingRewards = 0;
     if (userStaked > 0 && !isOnHold) {
       pendingRewards = calculateDIELBSParticipationRewards(userStaked, totalStakedNum, user.lastStakeRewardClaim, currentHeight);
@@ -1298,16 +1298,16 @@ export async function registerRoutes(
 
             const latestStaked = parseFloat(lockedUser.stakedBalance || "0");
             const availableBalance = parseFloat(lockedUser.balance || "0");
-            
+
             // Re-calculate rewards using the locked record's timestamp (Security: Anti-Multi-Tab exploit)
             const trueRewards = calculateDIELBSParticipationRewards(latestStaked, totalStakedNum, lockedUser.lastStakeRewardClaim, currentHeight);
             if (isNaN(trueRewards) || trueRewards <= 0.0001) return; // Already claimed by another tab
 
             const newBalance = (availableBalance + trueRewards).toFixed(4);
-            
+
             // Execute parallel updates across Ledger and Wallet tables
             await tx.update(users)
-              .set({ 
+              .set({
                 balance: newBalance,
                 lastStakeRewardClaim: new Date()
               })
@@ -1347,7 +1347,7 @@ export async function registerRoutes(
     const infoApy = calculateNetworkAPY(totalStakedNum, currentHeight);
     const infoTotalMinedStr = await storage.getTotalMinedSupply();
     const infoTotalMined = parseFloat(infoTotalMinedStr);
-    
+
     // Use high-performance cached values from the user record
     const totalRewardsEarned = user.totalRewardsEarned || "0";
     const lastRewardAmount = user.lastRewardAmount || "0";
@@ -1392,7 +1392,7 @@ export async function registerRoutes(
     if (isBlockchainPaused) {
       return res.status(503).json({ message: "Network is currently paused for maintenance. Please try again later." });
     }
-    
+
     try {
       // Use a fresh query to avoid stale session data
       // @ts-ignore
@@ -1432,7 +1432,7 @@ export async function registerRoutes(
 
       // ATOMIC UPDATE
       await storage.updateUserStake(user.id, newStakedBalance, newBalance, new Date());
-      
+
       await storage.createTransaction({
         senderId: user.id,
         receiverId: null,
@@ -1469,7 +1469,7 @@ export async function registerRoutes(
     if (isBlockchainPaused) {
       return res.status(503).json({ message: "Network is currently paused for maintenance. Please try again later." });
     }
-    
+
     try {
       // @ts-ignore
       const user = await storage.getUser(req.session.userId);
@@ -1742,8 +1742,8 @@ export async function registerRoutes(
       const miner = block.minerId ? await storage.getUser(block.minerId) : null;
       return { ...block, minerAddress: miner?.walletAddress || null };
     }));
-    
-    const [countResult] = await db.execute(sql`SELECT count(*) FROM blocks`);
+
+    const countResult = await db.execute(sql`SELECT count(*) FROM blocks`);
     const totalCount = parseInt((countResult.rows[0] as any).count);
 
     res.json({ blocks: enriched, totalCount });
@@ -1755,8 +1755,8 @@ export async function registerRoutes(
     const safeLimit = Math.min(limit, 100);
 
     const txs = await storage.getTransactions(safeLimit, offset);
-    
-    const [countResult] = await db.execute(sql`SELECT count(*) FROM transactions`);
+
+    const countResult = await db.execute(sql`SELECT count(*) FROM transactions`);
     const totalCount = parseInt((countResult.rows[0] as any).count);
 
     res.json({ transactions: txs, totalCount });
@@ -1891,7 +1891,7 @@ export async function registerRoutes(
     if (typeof isFoundation === 'boolean') updateData.isFoundation = isFoundation;
 
     await db.update(users).set(updateData).where(eq(users.id, targetUserId));
-    
+
     res.json({ success: true, message: `User ${targetUser.username} updated successfully.` });
   });
 
@@ -1971,10 +1971,10 @@ export async function registerRoutes(
 
     const { isPaused } = req.body;
     isBlockchainPaused = !!isPaused;
-    
+
     // Announce to log
     console.log(`[ADMIN] Blockchain Paused State: ${isBlockchainPaused} by ${admin.username}`);
-    
+
     res.json({ success: true, isPaused: isBlockchainPaused });
   });
 
@@ -1991,7 +1991,7 @@ export async function registerRoutes(
     try {
       await db.insert(blockedWallets).values({ address, reason: reason || "Admin action" });
       res.json({ success: true, message: `Wallet ${address} successfully blacklisted.` });
-    } catch(err) {
+    } catch (err) {
       res.status(500).json({ success: false, message: "Could not blacklist (might already be blacklisted)." });
     }
   });
@@ -2011,31 +2011,31 @@ export async function registerRoutes(
     if (!MINT_PASSWORD) return res.status(500).json({ message: "Network Security Error: GENESIS_MINT_PASSWORD not configured." });
 
     const createGenesisUser = async (username: string, amount: string, isDevFlag: boolean, isFoundationFlag: boolean) => {
-        const hashedPassword = await bcrypt.hash(MINT_PASSWORD, 12);
-        const wallet = generateWallet();
-        const user = await storage.createUser({
-          username,
-          password: hashedPassword,
-          walletAddress: wallet.address,
-          polygonAddress: wallet.polygonAddress,
-          balance: amount,
-          isDev: isDevFlag,
-          isFoundation: isFoundationFlag,
-          nonce: 0
-        });
+      const hashedPassword = await bcrypt.hash(MINT_PASSWORD, 12);
+      const wallet = generateWallet();
+      const user = await storage.createUser({
+        username,
+        password: hashedPassword,
+        walletAddress: wallet.address,
+        polygonAddress: wallet.polygonAddress,
+        balance: amount,
+        isDev: isDevFlag,
+        isFoundation: isFoundationFlag,
+        nonce: 0
+      });
 
-        const encryptedKey = encryptPrivateKey(wallet.privateKey, MINT_PASSWORD);
-        await storage.createWalletAddress({
-          userId: user.id,
-          label: "Genesis Wallet",
-          address: wallet.address,
-          polygonAddress: wallet.polygonAddress,
-          publicKey: wallet.publicKey,
-          encryptedPrivateKey: encryptedKey,
-          mnemonic: wallet.mnemonic,
-          isPrimary: true,
-        });
-        return user;
+      const encryptedKey = encryptPrivateKey(wallet.privateKey, MINT_PASSWORD);
+      await storage.createWalletAddress({
+        userId: user.id,
+        label: "Genesis Wallet",
+        address: wallet.address,
+        polygonAddress: wallet.polygonAddress,
+        publicKey: wallet.publicKey,
+        encryptedPrivateKey: encryptedKey,
+        mnemonic: wallet.mnemonic,
+        isPrimary: true,
+      });
+      return user;
     };
 
     try {
@@ -2046,9 +2046,9 @@ export async function registerRoutes(
       await createGenesisUser("foundation_wallet", "3400000000", false, true);
       // Migration = Reserve for V1 holders (Burned V1 supply minus dev/foundation blocks)
       await createGenesisUser("migration_wallet", "14200000000", false, false);
-      
+
       res.json({ success: true, message: "Genesis complete: Dev, Foundation, and Migration wallets instantiated successfully." });
-    } catch(err) {
+    } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Failed during genesis process." });
     }
@@ -2073,18 +2073,18 @@ export async function registerRoutes(
     console.log(`[TREASURY] Fetching Info & Seeds: Migration=${!!migrationAddr}, Dev=${!!devAddr}, Foundation=${!!foundationAddr}`);
 
     res.json({
-      migration: { 
-        address: migration?.walletAddress || "NOT_FOUND", 
+      migration: {
+        address: migration?.walletAddress || "NOT_FOUND",
         balance: migration?.balance,
         mnemonic: migrationAddr?.mnemonic || "NOT_GENERATED"
       },
-      dev: { 
-        address: dev?.walletAddress || "NOT_FOUND", 
+      dev: {
+        address: dev?.walletAddress || "NOT_FOUND",
         balance: dev?.balance,
         mnemonic: devAddr?.mnemonic || "NOT_GENERATED"
       },
-      foundation: { 
-        address: foundation?.walletAddress || "NOT_FOUND", 
+      foundation: {
+        address: foundation?.walletAddress || "NOT_FOUND",
         balance: foundation?.balance,
         mnemonic: foundationAddr?.mnemonic || "NOT_GENERATED"
       }
@@ -2099,14 +2099,14 @@ export async function registerRoutes(
       const status = await checkConnection();
       const tokenAddress = getContractAddress();
       const latestBlock = await storage.getLatestBlock();
-      
+
       // Force native WEBD2 network UI display override with LIVE block height
-      res.json({ 
-        ...status, 
-        network: "WEBD2 Testnet", 
+      res.json({
+        ...status,
+        network: "WEBD2 Testnet",
         tokenContract: tokenAddress,
         blockNumber: latestBlock?.id || 1,
-        txLatency: lastTxLatency 
+        txLatency: lastTxLatency
       });
     } catch (err: any) {
       res.json({ connected: false, network: "Unknown", chainId: null, blockNumber: null, tokenContract: null });
@@ -2120,7 +2120,7 @@ export async function registerRoutes(
         ...stats,
         connectedPeers: getConnectedPeersCount(),
       });
-    } catch(err) {
+    } catch (err) {
       console.error("Network stats error:", err);
       res.status(500).json({ message: "Failed to fetch network stats" });
     }
@@ -2217,20 +2217,20 @@ export async function registerRoutes(
     try {
       // @ts-ignore
       const userId = req.session.userId || null;
-      
+
       const trimmedEmail = email.trim();
-      
+
       // 1. Check if email already exists anywhere in the waitlist
       const existingEmail = await storage.getCardWaitlistEntryByEmail(trimmedEmail);
       if (existingEmail) {
-         return res.status(400).json({ message: "This email is already on our waitlist!" });
+        return res.status(400).json({ message: "This email is already on our waitlist!" });
       }
 
       // 2. If logged in, check if user already joined with a different email
       if (userId) {
         const existingUser = await storage.getCardWaitlistEntry(userId);
         if (existingUser) {
-           return res.status(400).json({ message: "You have already joined the waitlist with another email." });
+          return res.status(400).json({ message: "You have already joined the waitlist with another email." });
         }
       }
 
@@ -2263,7 +2263,7 @@ export async function registerRoutes(
       if (user) {
         results.users.push({ username: user.username, walletAddress: user.walletAddress });
       }
-      
+
       const txs = await storage.getTransactions(100);
       for (const tx of txs) {
         if (tx.senderAddress === q || tx.receiverAddress === q) {
@@ -2286,30 +2286,30 @@ export async function registerRoutes(
 
     res.json(results);
   });
-  
+
   app.get("/api/explorer/validate-chain", async (_req, res) => {
     try {
       const allBlocks = await storage.getBlocks(1000); // Verify last 1000 blocks
       let isValid = true;
-      
+
       // Start from oldest (reverse order of storage.getBlocks which is desc)
       const sortedBlocks = [...allBlocks].sort((a, b) => a.id - b.id);
-      
+
       for (let i = 1; i < sortedBlocks.length; i++) {
         const current = sortedBlocks[i];
         const prev = sortedBlocks[i - 1];
-        
+
         // 1. Check if the block correctly points to the previous hash
         if (current.previousHash !== prev.hash) {
           console.error(`[CHAIN_ERROR] Block ${current.id} has invalid linkage to ${prev.id}. Current points to ${current.previousHash}, Expected ${prev.hash}`);
           isValid = false;
           break;
         }
-        
+
         // 2. Mathematically verify the current block's own hash (Simplified for Testnet efficiency)
         const checkHash = createHash("sha256").update(current.previousHash + (current.timestamp ? new Date(current.timestamp).getTime() : "0") + current.id).digest("hex");
       }
-      
+
       res.json({ isValid, checkedBlocks: sortedBlocks.length });
     } catch (err: any) {
       res.status(500).json({ message: "Integrity check failed" });
@@ -2574,39 +2574,39 @@ If you don't know something, say so honestly. Do not make up information. Keep a
     try {
       // Leader Election logic
       if (process.env.IS_BLOCK_PRODUCER === "false") return;
-      
+
       try {
         // 1. Get the current state to know what we are signing
         const latestInfo = await storage.getLatestBlock(true);
         const nextId = (latestInfo?.id || 0) + 1;
         const prevHash = latestInfo?.hash || "0x00000000000000000000000000000000GENESIS_BLOCK_WD2_PROTOCOL_V2";
-        
+
         // Seed the hash for the next block
         const newHash = createHash("sha256").update(prevHash + (latestInfo?.id ? latestInfo.id : 0) + nextId).digest("hex");
-        
+
         // 🛡️ THE HYBRID QUORUM: Request mathematical signatures from active browsers
         broadcastQuorumVoteRequest(newHash);
-        
+
         // ⏳ Wait 2.0 seconds (OUTSIDE of transaction) to collect signatures
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         // Tally the Decentralized Signatures.
         const collectedSignatures = activeQuorumVotes.get(newHash) || 0;
         const hybridSignatures = Math.max(1, collectedSignatures);
         const rewardAmount = getCurrentBlockReward(nextId);
-        
+
         // 🛡️ ATOMIC COMMIT: Open transaction ONLY for the final check and insert
         await db.transaction(async (tx) => {
           // Re-verify latest block WITHIN transaction to prevent race conditions
           const result = await tx.execute(sql`SELECT * FROM blocks ORDER BY id DESC LIMIT 1 FOR UPDATE`);
           const latest = result.rows[0] as unknown as Block | undefined;
-          
+
           const actualPrevHash = latest?.hash || "0x00000000000000000000000000000000GENESIS_BLOCK_WD2_PROTOCOL_V2";
           const finalNextId = (latest?.id || 0) + 1;
-          
+
           // Re-derive hash if the parent changed while we were waiting (Self-healing)
-          const finalHash = (actualPrevHash === prevHash) ? newHash : 
-                            createHash("sha256").update(actualPrevHash + (latest?.id ? latest.id : 0) + finalNextId).digest("hex");
+          const finalHash = (actualPrevHash === prevHash) ? newHash :
+            createHash("sha256").update(actualPrevHash + (latest?.id ? latest.id : 0) + finalNextId).digest("hex");
 
           await tx.insert(blocks).values({
             hash: finalHash,
@@ -2616,15 +2616,15 @@ If you don't know something, say so honestly. Do not make up information. Keep a
             difficulty: 1,
             nonce: hybridSignatures
           });
-          
+
           if (finalNextId % 100 === 0) {
             console.log(`[DIELBS] Produced Block #${finalNextId} | Signatures: ${hybridSignatures}`);
           }
         });
-        
+
         // Clean up
         activeQuorumVotes.delete(newHash);
-        
+
       } catch (prodErr) {
         console.error("[DIELBS] Block production aborted due to race or error:", prodErr);
       }
@@ -2645,7 +2645,7 @@ If you don't know something, say so honestly. Do not make up information. Keep a
             const val = parseFloat(u.stakedBalance || "0");
             return sum + (isNaN(val) ? 0 : val);
           }, 0);
-          
+
           if (totalNetworkStaked > 0 && !isNaN(rewardAmount)) {
             for (const user of activeStakers) {
               const userStake = parseFloat(user.stakedBalance || "0");
@@ -2661,9 +2661,9 @@ If you don't know something, say so honestly. Do not make up information. Keep a
 
               if (!isNaN(userReward) && userReward > 0.0001) {
                 const currentBalance = parseFloat(user.balance || "0");
-                const newBalance = ( (isNaN(currentBalance) ? 0 : currentBalance) + userReward).toFixed(4);
+                const newBalance = ((isNaN(currentBalance) ? 0 : currentBalance) + userReward).toFixed(4);
                 await storage.updateUser(user.id, { balance: newBalance });
-                
+
                 // Log the reward transaction
                 await db.insert(transactions).values({
                   receiverId: user.id,

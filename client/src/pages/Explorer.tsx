@@ -59,26 +59,6 @@ export default function Explorer() {
     setSearchResults(null);
   };
 
-  const { data: polygonBlocks, isLoading: blocksLoading } = useQuery({
-    queryKey: ["/api/blockchain/explorer/blocks"],
-    queryFn: async () => {
-      const res = await fetch("/api/blockchain/explorer/blocks");
-      if (!res.ok) return { blocks: [], polygonscanUrl: "" };
-      return await res.json();
-    },
-    refetchInterval: 30000,
-  });
-
-  const { data: polygonTxs, isLoading: txsLoading } = useQuery({
-    queryKey: ["/api/blockchain/explorer/transactions"],
-    queryFn: async () => {
-      const res = await fetch("/api/blockchain/explorer/transactions");
-      if (!res.ok) return { transactions: [], polygonscanUrl: "" };
-      return await res.json();
-    },
-    refetchInterval: 30000,
-  });
-
   const { data: blockchainStatus } = useQuery({
     queryKey: ["/api/blockchain/status"],
     queryFn: async () => {
@@ -86,10 +66,10 @@ export default function Explorer() {
       if (!res.ok) return null;
       return await res.json();
     },
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   });
 
-  const scanUrl = polygonBlocks?.polygonscanUrl || "https://amoy.polygonscan.com";
+  const scanUrl = blockchainStatus?.polygonscanUrl || "https://explorer.webdollar2.com";
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
@@ -109,17 +89,17 @@ export default function Explorer() {
 
       <div className="bg-black/40 border border-primary/20 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-           <div className={`p-4 rounded-full ${integrityReport?.isValid ? 'bg-green-500/10' : 'bg-primary/10'}`}>
-             <ShieldCheck className={`w-8 h-8 ${integrityReport?.isValid ? 'text-green-500' : 'text-primary'}`} />
-           </div>
-           <div>
-             <h3 className="text-xl font-heading text-white">CHAIN INTEGRITY PROTOCOL</h3>
-             <p className="text-xs font-mono text-muted-foreground">Verify the cryptographic link between all blocks in the DIELBS ledger.</p>
-           </div>
+          <div className={`p-4 rounded-full ${integrityReport?.isValid ? 'bg-green-500/10' : 'bg-primary/10'}`}>
+            <ShieldCheck className={`w-8 h-8 ${integrityReport?.isValid ? 'text-green-500' : 'text-primary'}`} />
+          </div>
+          <div>
+            <h3 className="text-xl font-heading text-white">CHAIN INTEGRITY PROTOCOL</h3>
+            <p className="text-xs font-mono text-muted-foreground">Verify the cryptographic link between all blocks in the DIELBS ledger.</p>
+          </div>
         </div>
         <Button onClick={validateChain} disabled={isValidating} className={`shrink-0 h-14 px-8 border-2 font-black tracking-widest ${integrityReport?.isValid ? 'bg-green-950 border-green-500 text-green-400' : 'btn-neon'}`}>
-           {isValidating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <ShieldCheck className="w-5 h-5 mr-2" />}
-           {isValidating ? "SCANNING HASHES..." : (integrityReport?.isValid ? "LEDGER VERIFIED SECURE" : "VALIDATE CHAIN IMMUTABILITY")}
+          {isValidating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <ShieldCheck className="w-5 h-5 mr-2" />}
+          {isValidating ? "SCANNING HASHES..." : (integrityReport?.isValid ? "LEDGER VERIFIED SECURE" : "VALIDATE CHAIN IMMUTABILITY")}
         </Button>
       </div>
 
@@ -221,7 +201,7 @@ export default function Explorer() {
                   </tr>
                 ))}
                 {(!blocks || blocks.length === 0) && (
-                  <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No blocks detected. Start mining to generate native DIELBS blocks.</td></tr>
+                  <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No blocks detected. Start mining to generate native DIELBS blocks.</td></tr>
                 )}
               </tbody>
             </table>
@@ -247,13 +227,12 @@ export default function Explorer() {
                 {transactions?.map((tx: any) => (
                   <tr key={tx.id} className="hover:bg-primary/5 transition-colors" data-testid={`tx-row-${tx.id}`}>
                     <td className="py-3 px-2">
-                      <span className={`px-2 py-0.5 text-[9px] font-black uppercase border rounded-sm ${
-                        tx.type === 'mining_reward' ? 'border-accent text-accent' :
+                      <span className={`px-2 py-0.5 text-[9px] font-black uppercase border rounded-sm ${tx.type === 'mining_reward' ? 'border-accent text-accent' :
                         tx.type === 'faucet_reward' ? 'border-blue-400 text-blue-400' :
-                        tx.type === 'staking_reward' ? 'border-green-400 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.2)]' :
-                        tx.type === 'conversion' ? 'border-yellow-500 text-yellow-500' :
-                        'border-primary text-primary'
-                      }`}>
+                          tx.type === 'staking_reward' ? 'border-green-400 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.2)]' :
+                            tx.type === 'conversion' ? 'border-yellow-500 text-yellow-500' :
+                              'border-primary text-primary'
+                        }`}>
                         {tx.type.replace('_', ' ')}
                       </span>
                     </td>
