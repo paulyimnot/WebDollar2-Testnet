@@ -20,7 +20,7 @@ export default function Explorer() {
     setIsValidating(true);
     setIntegrityReport(null);
     try {
-      const res = await fetch("/api/explorer/validate-chain");
+      const res = await fetch(`/api/explorer/validate-chain?t=${Date.now()}`);
       if (!res.ok) throw new Error("Validation failed");
       const data = await res.json();
       setIntegrityReport(data);
