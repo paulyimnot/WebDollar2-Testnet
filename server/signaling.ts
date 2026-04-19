@@ -9,6 +9,13 @@ export function getConnectedPeersCount(): number {
 export const activeQuorumVotes = new Map<string, number>();
 
 export function broadcastQuorumVoteRequest(blockHash: string) {
+  // 🛡️ MEMORY SAFETY: Only keep the most recent 100 block hashes in the vote tally 
+  // to prevent memory leaks as the chain grows to millions of blocks.
+  if (activeQuorumVotes.size > 100) {
+    const firstKey = activeQuorumVotes.keys().next().value;
+    if (firstKey) activeQuorumVotes.delete(firstKey);
+  }
+
   activeQuorumVotes.set(blockHash, 0); // Reset vote tally for this hash
   const requestPayload = JSON.stringify({ type: 'vote_request', hash: blockHash });
   for (const peer of peers.values()) {

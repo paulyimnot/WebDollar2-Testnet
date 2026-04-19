@@ -22,6 +22,7 @@ import { pool } from "./db.js";
 import { getConnectedPeersCount, getLivePeerList, broadcastQuorumVoteRequest, activeQuorumVotes } from "./signaling.js";
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const faucetIpStamps = new Map<string, number>();
+const transferCooldowns = new Map<number, number>();
 export let isBlockchainPaused = false;
 let lastTxLatency = 12; // ms, baseline
 let latencyHistory: number[] = [12, 12, 12, 12, 12]; // Keep a small window for moving average
@@ -839,6 +840,13 @@ export async function registerRoutes(
   app.post(api.wallet.transfer.path, async (req, res) => {
     // @ts-ignore
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    // 🛡️ SECURITY: Per-user Transfer Rate Limiting (10s cooldown)
+    // Prevents "Dusting" attacks and network spamming.
+    // @ts-ignore
+    if (rateLimit(`transfer:${req.session.userId}`, 1, 10000)) {
+      return res.status(429).json({ message: "Network Cooldown: You can only initiate 1 transfer every 10 seconds." });
+    }
 
     if (isBlockchainPaused) {
       return res.status(503).json({ message: "Network is currently paused for maintenance. Please try again later." });
@@ -1725,17 +1733,33 @@ export async function registerRoutes(
   // === Explorer Routes ===
 
   app.get(api.explorer.blocks.path, async (req, res) => {
-    const blocksList = await storage.getBlocks();
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
+    const safeLimit = Math.min(limit, 100);
+
+    const blocksList = await storage.getBlocks(safeLimit, offset);
     const enriched = await Promise.all(blocksList.map(async (block) => {
       const miner = block.minerId ? await storage.getUser(block.minerId) : null;
       return { ...block, minerAddress: miner?.walletAddress || null };
     }));
-    res.json(enriched);
+    
+    const [countResult] = await db.execute(sql`SELECT count(*) FROM blocks`);
+    const totalCount = parseInt((countResult.rows[0] as any).count);
+
+    res.json({ blocks: enriched, totalCount });
   });
 
   app.get(api.explorer.transactions.path, async (req, res) => {
-    const txs = await storage.getTransactions();
-    res.json(txs);
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
+    const safeLimit = Math.min(limit, 100);
+
+    const txs = await storage.getTransactions(safeLimit, offset);
+    
+    const [countResult] = await db.execute(sql`SELECT count(*) FROM transactions`);
+    const totalCount = parseInt((countResult.rows[0] as any).count);
+
+    res.json({ transactions: txs, totalCount });
   });
 
   // === Blocked Wallets ===

@@ -204,8 +204,8 @@ export class DatabaseStorage implements IStorage {
     return block;
   }
 
-  async getBlocks(limit = 10): Promise<Block[]> {
-    return await db.select().from(blocks).orderBy(desc(blocks.id)).limit(limit);
+  async getBlocks(limit = 10, offset = 0): Promise<Block[]> {
+    return await db.select().from(blocks).orderBy(desc(blocks.id)).limit(limit).offset(offset);
   }
 
   async createTransaction(tx: Omit<Transaction, "id" | "timestamp">): Promise<Transaction> {
@@ -224,8 +224,8 @@ export class DatabaseStorage implements IStorage {
     return newTx;
   }
 
-  async getTransactions(limit = 10): Promise<Transaction[]> {
-    return await db.select().from(transactions).orderBy(desc(transactions.id)).limit(limit);
+  async getTransactions(limit = 10, offset = 0): Promise<Transaction[]> {
+    return await db.select().from(transactions).orderBy(desc(transactions.id)).limit(limit).offset(offset);
   }
 
   async getUserTransactions(userId: number): Promise<Transaction[]> {
