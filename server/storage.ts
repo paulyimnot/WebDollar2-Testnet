@@ -176,9 +176,9 @@ export class DatabaseStorage implements IStorage {
     return newBlock;
   }
 
-  async getLatestBlock(): Promise<Block | undefined> {
+  async getLatestBlock(forceRefresh = false): Promise<Block | undefined> {
     const now = Date.now();
-    if (this.cachedLatestBlock && (now - this.cachedLatestBlock.timestamp < this.BLOCK_CACHE_TTL)) {
+    if (!forceRefresh && this.cachedLatestBlock && (now - this.cachedLatestBlock.timestamp < this.BLOCK_CACHE_TTL)) {
       return this.cachedLatestBlock.value;
     }
 

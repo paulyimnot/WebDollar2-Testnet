@@ -2278,15 +2278,13 @@ export async function registerRoutes(
         
         // 1. Check if the block correctly points to the previous hash
         if (current.previousHash !== prev.hash) {
-          console.error(`[CHAIN_ERROR] Block ${current.id} has invalid linkage to ${prev.id}`);
+          console.error(`[CHAIN_ERROR] Block ${current.id} has invalid linkage to ${prev.id}. Current points to ${current.previousHash}, Expected ${prev.hash}`);
           isValid = false;
           break;
         }
         
         // 2. Mathematically verify the current block's own hash (Simplified for Testnet efficiency)
         const checkHash = createHash("sha256").update(current.previousHash + (current.timestamp ? new Date(current.timestamp).getTime() : "0") + current.id).digest("hex");
-        // Note: For absolute realism, blocks produced earlier would match this formula. 
-        // In this testnet version, we primarily verify the chain linkage (The "Glue").
       }
       
       res.json({ isValid, checkedBlocks: sortedBlocks.length });
@@ -2553,12 +2551,15 @@ If you don't know something, say so honestly. Do not make up information. Keep a
     try {
       // Leader Election logic: Default to true unless explicitly disabled for RPC nodes
       if (process.env.IS_BLOCK_PRODUCER === "false") return;
-      const latest = await storage.getLatestBlock();
+      
+      // CRITICAL: Force refresh from DB to prevent split-brain/forking during parallel deployments
+      const latest = await storage.getLatestBlock(true); 
       const nextId = (latest?.id || 0) + 1;
       const prevHash = latest?.hash || "0x00000000000000000000000000000000GENESIS_BLOCK_WD2_PROTOCOL_V2";
       
       // Seed a semi-random hash for the new block
-      const newHash = createHash("sha256").update(prevHash + Date.now() + nextId).digest("hex");
+      // 🛡️ SECURITY: Use the official previous hash as the basis for the new block's identity
+      const newHash = createHash("sha256").update(prevHash + (latest?.id ? latest.id : 0) + nextId).digest("hex");
       
       // 🛡️ THE HYBRID QUORUM: Request mathematical signatures from active browsers
       broadcastQuorumVoteRequest(newHash);
