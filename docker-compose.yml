@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: webdollar2user
+      POSTGRES_PASSWORD: webdollar2password
+      POSTGRES_DB: webdollar2db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  webdollar2-node:
+    build: .
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DATABASE_URL=postgresql://webdollar2user:webdollar2password@postgres:5432/webdollar2db
+      - SESSION_SECRET=${SESSION_SECRET:-generate_a_secure_random_string_here}
+      - CLUSTER_SECRET=${CLUSTER_SECRET:-insecure_default}
+      - CLUSTER_PEERS=${CLUSTER_PEERS:-}
+    ports:
+      - "5000:5000"
+    command: >
+      sh -c "npm run db:push && npm start"
+
+volumes:
+  postgres_data:

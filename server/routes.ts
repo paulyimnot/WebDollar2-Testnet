@@ -1303,7 +1303,11 @@ export async function registerRoutes(
             const trueRewards = calculateDIELBSParticipationRewards(latestStaked, totalStakedNum, lockedUser.lastStakeRewardClaim, currentHeight);
             if (isNaN(trueRewards) || trueRewards <= 0.0001) return; // Already claimed by another tab
 
-            const newBalance = (availableBalance + trueRewards).toFixed(4);
+            const nodeShareGlobal = trueRewards * 0.06;
+            const nodeShareBackbone = trueRewards * 0.10;
+            const minerReward = trueRewards - nodeShareGlobal - nodeShareBackbone;
+
+            const newBalance = (availableBalance + minerReward).toFixed(4);
 
             // Execute parallel updates across Ledger and Wallet tables
             await tx.update(users)
@@ -1313,23 +1317,71 @@ export async function registerRoutes(
               })
               .where(eq(users.id, lockedUser.id));
 
-            // Record the transaction in the consensus ledger
+            // Record the transaction in the consensus ledger for the Miner
             await tx.insert(transactions).values({
               senderId: null,
               receiverId: lockedUser.id,
               senderAddress: "DIELBS_CONSENSUS",
               receiverAddress: lockedUser.walletAddress,
-              amount: trueRewards.toFixed(4),
+              amount: minerReward.toFixed(4),
               type: "staking_reward",
               createdAt: new Date(),
             } as any);
 
-            // Sync the primary wallet balance
+            // Record Global Treasury Pool Deduction
+            await tx.insert(transactions).values({
+              senderId: null,
+              receiverId: null,
+              senderAddress: "DIELBS_CONSENSUS",
+              receiverAddress: "NODE_TREASURY_POOL",
+              amount: nodeShareGlobal.toFixed(4),
+              type: "node_reward",
+              createdAt: new Date(),
+            } as any);
+
+            // Record 10% Instant Backbone Fee
+            const operatorWallet = process.env.OPERATOR_WALLET_ADDRESS;
+            if (operatorWallet) {
+               await tx.insert(transactions).values({
+                 senderId: null,
+                 receiverId: null,
+                 senderAddress: "DIELBS_CONSENSUS",
+                 receiverAddress: operatorWallet,
+                 amount: nodeShareBackbone.toFixed(4),
+                 type: "backbone_fee",
+                 createdAt: new Date(),
+               } as any);
+               
+               // Credit the operator's wallet balance if it exists locally on this DB
+               const [opAddrRow] = await tx.select().from(walletAddresses).where(eq(walletAddresses.address, operatorWallet)).limit(1);
+               if (opAddrRow) {
+                  await tx.update(walletAddresses)
+                    .set({ balance: (parseFloat(opAddrRow.balance || "0") + nodeShareBackbone).toFixed(4) })
+                    .where(eq(walletAddresses.id, opAddrRow.id));
+                  
+                  await tx.update(users)
+                    .set({ balance: sql`balance::numeric + ${nodeShareBackbone}::numeric` })
+                    .where(eq(users.id, opAddrRow.userId));
+               }
+            } else {
+               // If no operator configured, it defaults back to the global treasury
+               await tx.insert(transactions).values({
+                 senderId: null,
+                 receiverId: null,
+                 senderAddress: "DIELBS_CONSENSUS",
+                 receiverAddress: "NODE_TREASURY_POOL",
+                 amount: nodeShareBackbone.toFixed(4),
+                 type: "node_reward",
+                 createdAt: new Date(),
+               } as any);
+            }
+
+            // Sync the primary wallet balance for the miner
             const [minerWalletAddr] = await tx.select().from(walletAddresses).where(eq(walletAddresses.address, lockedUser.walletAddress!)).limit(1);
             if (minerWalletAddr) {
               const addrBal = parseFloat(minerWalletAddr.balance || "0");
               await tx.update(walletAddresses)
-                .set({ balance: ((isNaN(addrBal) ? 0 : addrBal) + trueRewards).toFixed(4) })
+                .set({ balance: ((isNaN(addrBal) ? 0 : addrBal) + minerReward).toFixed(4) })
                 .where(eq(walletAddresses.id, minerWalletAddr.id));
             }
 

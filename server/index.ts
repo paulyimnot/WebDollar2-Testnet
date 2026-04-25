@@ -10,6 +10,7 @@ import helmet from "helmet";
 import compression from "compression";
 import { rateLimit } from "express-rate-limit";
 import { clusterManager } from "./cluster.js";
+import { startDailyNodePayoutCron } from "./nodePayouts.js";
 
 // 🛡️ WAVE 1: CRITICAL STARTUP VALIDATION
 if (!process.env.SESSION_SECRET) {
@@ -194,6 +195,7 @@ app.use((req, res, next) => {
 
   // Initialize Geo-Distributed Cluster Sync
   clusterManager.init();
+  startDailyNodePayoutCron();
 
 (async () => {
   await registerRoutes(httpServer, app);

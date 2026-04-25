@@ -90,6 +90,13 @@ export const bannedIps = pgTable("banned_ips", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const networkNodes = pgTable("network_nodes", {
+  id: serial("id").primaryKey(),
+  walletAddress: text("wallet_address").notNull().unique(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const blocks = pgTable("blocks", {
   id: serial("id").primaryKey(),
   hash: text("hash").notNull(),
@@ -108,7 +115,7 @@ export const transactions = pgTable("transactions", {
   senderAddress: text("sender_address"),
   receiverAddress: text("receiver_address"),
   amount: numeric("amount", { precision: 20, scale: 4 }).notNull(),
-  type: text("type", { enum: ["transfer", "mining_reward", "staking_reward", "conversion", "fee", "purchase", "faucet_reward"] }).notNull(),
+  type: text("type", { enum: ["transfer", "mining_reward", "staking_reward", "conversion", "fee", "purchase", "faucet_reward", "backbone_fee", "node_reward"] }).notNull(),
   blockId: integer("block_id").references(() => blocks.id),
   timestamp: timestamp("timestamp").defaultNow(),
 });
@@ -162,6 +169,7 @@ export type WalletAddress = typeof walletAddresses.$inferSelect;
 export type InsertWalletAddress = z.infer<typeof insertWalletAddressSchema>;
 export type BlockedWallet = typeof blockedWallets.$inferSelect;
 export type CasinoSweepstake = typeof casinoSweepstakes.$inferSelect;
+export type NetworkNode = typeof networkNodes.$inferSelect;
 
 export * from "./models/chat";
 
