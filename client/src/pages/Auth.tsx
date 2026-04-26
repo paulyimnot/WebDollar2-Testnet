@@ -5,7 +5,7 @@ import { CyberCard } from "@/components/CyberCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Loader2, ShieldCheck, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
 import logoImg from "@assets/1771108919092_1771109065229.jpg";
@@ -23,6 +23,10 @@ export default function Auth() {
   const [seedPhrase, setSeedPhrase] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -192,14 +196,24 @@ export default function Auth() {
                 </div>
                 <div className="space-y-4 pt-2">
                   <label className="text-sm font-mono text-primary font-bold tracking-widest uppercase">PASSWORD</label>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="bg-input border-2 border-primary/30 font-mono py-8 text-xl text-white"
-                    placeholder="Enter passphrase..."
-                    data-testid="input-login-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showLoginPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-input border-2 border-primary/30 font-mono py-8 text-xl text-white pr-14"
+                      placeholder="Enter passphrase..."
+                      data-testid="input-login-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(v => !v)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-primary/50 hover:text-primary transition-colors"
+                      aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                    >
+                      {showLoginPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground font-mono uppercase font-bold tracking-wider text-center mt-6">
                   ⚠️ Reminder: Login is case-sensitive, of course.
@@ -227,14 +241,24 @@ export default function Auth() {
                 </div>
                 <div className="space-y-4 pt-2">
                   <label className="text-sm font-mono text-primary font-bold tracking-widest uppercase">NEW PASSWORD</label>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="bg-input border-2 border-primary/30 font-mono py-8 text-xl text-white"
-                    placeholder="Min 6 characters..."
-                    data-testid="input-register-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showRegisterPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-input border-2 border-primary/30 font-mono py-8 text-xl text-white pr-14"
+                      placeholder="Min 6 characters..."
+                      data-testid="input-register-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterPassword(v => !v)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-primary/50 hover:text-primary transition-colors"
+                      aria-label={showRegisterPassword ? "Hide password" : "Show password"}
+                    >
+                      {showRegisterPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground font-mono uppercase font-bold tracking-wider leading-relaxed bg-black/40 p-3 rounded border border-primary/10">
                   ⚡ SECURE: A unique cryptographic wallet with a 12-word seed phrase will be generated for your browser.
@@ -274,14 +298,24 @@ export default function Auth() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-mono text-primary/70">NEW PASSWORD</label>
-                  <Input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="bg-input border-primary/30 font-mono focus-visible:ring-primary"
-                    placeholder="Min 6 characters..."
-                    data-testid="input-reset-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showResetPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="bg-input border-primary/30 font-mono focus-visible:ring-primary pr-12"
+                      placeholder="Min 6 characters..."
+                      data-testid="input-reset-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-primary/50 hover:text-primary transition-colors"
+                      aria-label={showResetPassword ? "Hide password" : "Show password"}
+                    >
+                      {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <Button type="submit" disabled={isResetting || !resetUsername || !seedPhrase || !newPassword} className="w-full btn-neon-filled mt-4" data-testid="button-reset-submit">
                   {isResetting ? <Loader2 className="animate-spin" /> : "RESET PASSWORD"}
