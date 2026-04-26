@@ -10,8 +10,8 @@ Running a node pays you in two ways:
 
 | Reward | Amount | When |
 |--------|--------|------|
-| **Global Node Pool** | 6% of all network mining emissions | Paid daily to all active nodes, split proportionally |
-| **Backbone Mode Fee** | 10% of mining rewards | Paid instantly from every miner connected through your node |
+| **Global Node Pool** | 6% of **TOTAL** network mining | Paid daily to all active nodes, split proportionally |
+| **Backbone Mode Fee** | 10% of **CONNECTED** miner rewards | Paid instantly from users connected through your node |
 
 - If you are the **only active node**, you receive the entire 6% daily pool.
 - If there are **100 nodes**, you receive 1% of the pool (1/100th of the 6%).
