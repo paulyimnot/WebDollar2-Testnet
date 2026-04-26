@@ -85,58 +85,9 @@ docker-compose logs -f webdollar2-node
 docker-compose down
 ```
 
----
-
-### Method 3: Manual Installation *(For developers — full control)*
-
-<details>
-<summary><b>Click to expand manual installation steps</b></summary>
-
-**Prerequisites:**
-- Node.js v18 or higher
-- npm
-- PostgreSQL database (local or managed)
-
-**Step 1 — Clone and install**
-```bash
-git clone https://github.com/paulyimnot/WebDollar2-Testnet.git
-cd WebDollar2-Testnet
-npm install
-```
-
-**Step 2 — Create your `.env` file**
-```ini
-SESSION_SECRET=your_long_random_secret_here
-DATABASE_URL=postgresql://user:password@localhost:5432/webdollar2db
-CLUSTER_SECRET=get_this_from_the_webdollar_community
-CLUSTER_PEERS=https://existing-node-url.com
-OPERATOR_WALLET_ADDRESS=WEBDyourwalletaddresshere
-PORT=5000
-NODE_ENV=production
-```
-
-**Step 3 — Build and migrate**
-```bash
-npm run build
-npm run db:push
-```
-
-**Step 4 — Start**
-```bash
-npm run start
-```
-
-**Recommended: Keep it running with PM2**
-```bash
-npm install -g pm2
-pm2 start dist/index.cjs --name "webdollar2-node"
-pm2 save
-pm2 startup
-```
-
-</details>
 
 ---
+
 
 ## ✅ Verifying Your Node is Working
 
