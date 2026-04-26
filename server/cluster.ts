@@ -54,11 +54,17 @@ class ClusterManager {
   private attemptConnection(peer: ServerPeer) {
     try {
       // Connect to the /ws endpoint of the peer server
+      const clusterSecret = process.env.CLUSTER_SECRET;
+      if (!clusterSecret || clusterSecret === 'insecure_default') {
+        console.error("❌ FATAL: CLUSTER_SECRET is not set or is using the insecure default. This node refuses to join the cluster.");
+        peer.status = 'offline';
+        return;
+      }
       const wsUrl = peer.url.replace('http', 'ws') + '/ws';
       const ws = new WebSocket(wsUrl, {
         headers: {
           'x-dielbs-server-id': this.serverId,
-          'x-dielbs-auth': process.env.CLUSTER_SECRET || 'insecure_default'
+          'x-dielbs-auth': clusterSecret
         }
       });
 

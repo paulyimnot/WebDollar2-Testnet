@@ -27,6 +27,23 @@ export let isBlockchainPaused = false;
 let lastTxLatency = 12; // ms, baseline
 let latencyHistory: number[] = [12, 12, 12, 12, 12]; // Keep a small window for moving average
 
+// 🛡️ Cache operator wallet address once at startup — validated and reused on every reward claim
+const OPERATOR_WALLET = (() => {
+  const w = process.env.OPERATOR_WALLET_ADDRESS || null;
+  if (w) {
+    if (!w.startsWith("WEBD") || w.length < 20) {
+      console.error(`❌ FATAL: OPERATOR_WALLET_ADDRESS "${w}" does not look like a valid WEBD address. Backbone fees will be disabled.`);
+      return null;
+    }
+    if (w === "NODE_TREASURY_POOL" || w === "DIELBS_CONSENSUS" || w === "FAUCET_TESTNET") {
+      console.error(`❌ FATAL: OPERATOR_WALLET_ADDRESS cannot be a system address. Backbone fees will be disabled.`);
+      return null;
+    }
+    console.log(`✅ OPERATOR_WALLET_ADDRESS configured: ${w.substring(0, 12)}...`);
+  }
+  return w;
+})();
+
 function rateLimit(key: string, maxAttempts: number, windowMs: number): boolean {
   const now = Date.now();
   const entry = rateLimitMap.get(key);
@@ -1304,7 +1321,8 @@ export async function registerRoutes(
             if (isNaN(trueRewards) || trueRewards <= 0.0001) return; // Already claimed by another tab
 
             const nodeShareGlobal = trueRewards * 0.06;
-            const nodeShareBackbone = trueRewards * 0.10;
+            // Backbone fee only applies when this node has a configured operator wallet
+            const nodeShareBackbone = OPERATOR_WALLET ? trueRewards * 0.10 : 0;
             const minerReward = trueRewards - nodeShareGlobal - nodeShareBackbone;
 
             const newBalance = (availableBalance + minerReward).toFixed(4);
@@ -1339,21 +1357,20 @@ export async function registerRoutes(
               createdAt: new Date(),
             } as any);
 
-            // Record 10% Instant Backbone Fee
-            const operatorWallet = process.env.OPERATOR_WALLET_ADDRESS;
-            if (operatorWallet) {
+            // Record 10% Instant Backbone Fee (only if this node has a configured operator wallet)
+            if (OPERATOR_WALLET) {
                await tx.insert(transactions).values({
                  senderId: null,
                  receiverId: null,
                  senderAddress: "DIELBS_CONSENSUS",
-                 receiverAddress: operatorWallet,
+                 receiverAddress: OPERATOR_WALLET,
                  amount: nodeShareBackbone.toFixed(4),
                  type: "backbone_fee",
                  createdAt: new Date(),
                } as any);
                
                // Credit the operator's wallet balance if it exists locally on this DB
-               const [opAddrRow] = await tx.select().from(walletAddresses).where(eq(walletAddresses.address, operatorWallet)).limit(1);
+               const [opAddrRow] = await tx.select().from(walletAddresses).where(eq(walletAddresses.address, OPERATOR_WALLET)).limit(1);
                if (opAddrRow) {
                   await tx.update(walletAddresses)
                     .set({ balance: (parseFloat(opAddrRow.balance || "0") + nodeShareBackbone).toFixed(4) })
@@ -1363,17 +1380,6 @@ export async function registerRoutes(
                     .set({ balance: sql`balance::numeric + ${nodeShareBackbone}::numeric` })
                     .where(eq(users.id, opAddrRow.userId));
                }
-            } else {
-               // If no operator configured, it defaults back to the global treasury
-               await tx.insert(transactions).values({
-                 senderId: null,
-                 receiverId: null,
-                 senderAddress: "DIELBS_CONSENSUS",
-                 receiverAddress: "NODE_TREASURY_POOL",
-                 amount: nodeShareBackbone.toFixed(4),
-                 type: "node_reward",
-                 createdAt: new Date(),
-               } as any);
             }
 
             // Sync the primary wallet balance for the miner

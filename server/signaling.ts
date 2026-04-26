@@ -47,6 +47,9 @@ export function setupSignaling(server: any, app: any, storage: any) {
   if (isBootstrap) {
     console.log(`📡 MODE: OFFICIAL BOOTSTRAP NODE (ID: ${staticId})`);
   }
+  if (!process.env.OPERATOR_WALLET_ADDRESS) {
+    console.warn("⚠️  OPERATOR_WALLET_ADDRESS is not set. This node will NOT earn backbone fees or daily node rewards.");
+  }
   console.log("   Waiting for peer connections...\n");
 
   app.get("/api/staking/network", async (_req: any, res: any) => {
@@ -61,7 +64,16 @@ export function setupSignaling(server: any, app: any, storage: any) {
     }
   });
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
+      // 🛡️ SECURITY: Validate CLUSTER_SECRET on all incoming connections
+      const incomingSecret = req.headers['x-dielbs-auth'];
+      const expectedSecret = process.env.CLUSTER_SECRET;
+      if (expectedSecret && expectedSecret !== 'insecure_default' && incomingSecret !== expectedSecret) {
+        console.warn(`🚫 CLUSTER: Rejected unauthorized connection attempt. Invalid or missing auth token.`);
+        ws.close(4001, 'Unauthorized: Invalid cluster secret');
+        return;
+      }
+
       const peerId = staticId && peers.size === 0 && isBootstrap ? staticId : `peer-${nextId++}`;
       peers.set(peerId, { ws, id: peerId, links: new Set(), connectedAt: Date.now() });
       console.log(`✦ Peer connected: ${peerId} (${peers.size} total)`);

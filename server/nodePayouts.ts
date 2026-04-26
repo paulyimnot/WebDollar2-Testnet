@@ -74,15 +74,20 @@ async function processDailyNodePayouts() {
 
     console.log("💰 [NODE PAYOUT] Initiating daily 6% global node treasury distribution...");
 
+    // Sum all treasury inflows. Scoped to last 90 days for query performance.
+    // The treasury never carries balances older than this since it pays out daily.
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
     const [inResult] = await tx.execute(sql`
       SELECT COALESCE(SUM(amount::numeric), 0) as total_in 
       FROM transactions 
       WHERE receiver_address = 'NODE_TREASURY_POOL'
+      AND timestamp >= ${ninetyDaysAgo}
     `);
     const [outResult] = await tx.execute(sql`
       SELECT COALESCE(SUM(amount::numeric), 0) as total_out 
       FROM transactions 
       WHERE sender_address = 'NODE_TREASURY_POOL'
+      AND timestamp >= ${ninetyDaysAgo}
     `);
 
     const totalTreasuryBalance = parseFloat(inResult.total_in) - parseFloat(outResult.total_out);
@@ -124,6 +129,12 @@ async function processDailyNodePayouts() {
         await tx.update(users)
           .set({ balance: sql`balance::numeric + ${payoutPerNode.toFixed(4)}::numeric` })
           .where(eq(users.id, walletRow.userId));
+
+        // 💰 Log specifically when THIS node receives its payout
+        const operatorWallet = process.env.OPERATOR_WALLET_ADDRESS;
+        if (operatorWallet && node.walletAddress === operatorWallet) {
+          console.log(`💰 [NODE PAYOUT] YOUR NODE EARNED: ${payoutPerNode.toFixed(4)} WEBD -> ${operatorWallet.substring(0, 12)}...`);
+        }
       }
     }
 
