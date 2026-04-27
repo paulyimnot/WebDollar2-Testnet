@@ -2696,6 +2696,9 @@ If you don't know something, say so honestly. Do not make up information. Keep a
       // Leader Election logic
       if (process.env.IS_BLOCK_PRODUCER === "false") return;
 
+      let currentRewardAmount = 0;
+      let currentNextId = 1;
+
       try {
         // 1. Get the current state to know what we are signing
         const latestInfo = await storage.getLatestBlock(true);
@@ -2714,7 +2717,8 @@ If you don't know something, say so honestly. Do not make up information. Keep a
         // Tally the Decentralized Signatures.
         const collectedSignatures = activeQuorumVotes.get(newHash) || 0;
         const hybridSignatures = Math.max(1, collectedSignatures);
-        const rewardAmount = getCurrentBlockReward(nextId);
+        currentNextId = nextId;
+        currentRewardAmount = getCurrentBlockReward(nextId);
 
         // 🛡️ ATOMIC COMMIT: Open transaction ONLY for the final check and insert
         await db.transaction(async (tx) => {
@@ -2733,7 +2737,7 @@ If you don't know something, say so honestly. Do not make up information. Keep a
             hash: finalHash,
             previousHash: actualPrevHash,
             minerId: null,
-            reward: rewardAmount.toFixed(4),
+            reward: currentRewardAmount.toFixed(4),
             difficulty: 1,
             nonce: hybridSignatures
           });
@@ -2767,13 +2771,13 @@ If you don't know something, say so honestly. Do not make up information. Keep a
             return sum + (isNaN(val) ? 0 : val);
           }, 0);
 
-          if (totalNetworkStaked > 0 && !isNaN(rewardAmount)) {
+          if (totalNetworkStaked > 0 && !isNaN(currentRewardAmount)) {
             for (const user of activeStakers) {
               const userStake = parseFloat(user.stakedBalance || "0");
               if (isNaN(userStake) || userStake <= 0) continue;
 
               const userShare = userStake / totalNetworkStaked;
-              let userReward = rewardAmount * userShare;
+              let userReward = currentRewardAmount * userShare;
 
               // 💎 BACKBONE INCENTIVE: 10% BONUS for Network Pillars
               if (user.isBackbone === true) {
