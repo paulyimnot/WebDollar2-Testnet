@@ -29,19 +29,18 @@ import { Input } from "@/components/ui/input";
 
 interface TradeLog {
   id: string;
-  type: 'BUY' | 'SELL' | 'STAKE';
-  amount: number;
+  timestamp: string;
+  type: 'BUY' | 'SELL';
   price: number;
-  latency: string;
-  timestamp: Date;
-  status: 'SUCCESS' | 'PENDING';
+  amount: number;
+  status: string;
 }
 
 export default function Bot() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isActive, setIsActive] = useState(false);
-  const [strategy, setStrategy] = useState<'beginner' | 'balanced' | 'aggressive'>('beginner');
+  const [strategy, setStrategy] = useState<string>('grid');
   const [logs, setLogs] = useState<TradeLog[]>([]);
   const [totalProfit, setTotalProfit] = useState(0);
   const [activeStake, setActiveStake] = useState(0);
@@ -359,13 +358,17 @@ export default function Bot() {
                                 <span className="text-[10px] text-muted-foreground font-normal">@{log.price.toFixed(6)}</span>
                               </div>
                               <div className="text-[10px] text-muted-foreground font-mono">
-                                ID: {log.id} • {format(log.timestamp, 'HH:mm:ss')}
+                                ID: {log.id} • {format(new Date(log.timestamp), 'HH:mm:ss')}
                               </div>
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-[10px] font-mono text-accent font-bold">L: {log.latency}</div>
-                            <div className="text-[10px] font-mono text-green-400 uppercase">Confirmed</div>
+                            <div className="text-[10px] font-mono text-accent font-bold uppercase truncate max-w-[120px]">
+                              {log.status.includes('SYSTEM') ? 'INFO' : log.status}
+                            </div>
+                            <div className="text-[10px] font-mono text-green-400 uppercase">
+                              {log.status.includes('SYSTEM') ? 'SYSTEM' : 'LIVE'}
+                            </div>
                           </div>
                         </motion.div>
                       ))
