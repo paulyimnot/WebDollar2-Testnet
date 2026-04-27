@@ -57,6 +57,7 @@ export default function Bot() {
     exchange: "binance",
     apiKey: "",
     secret: "",
+    passphrase: "",
     symbol: "BTC/USDT",
     amount: "0.01",
     strategy: "grid",
@@ -454,6 +455,10 @@ export default function Bot() {
               <div className="grid grid-cols-4 items-center gap-4">
                 <label className="text-right text-xs text-muted-foreground">API Secret</label>
                 <Input type="password" className="col-span-3 bg-black/50 border-white/10" value={configForm.secret} onChange={e => setConfigForm({...configForm, secret: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-xs text-muted-foreground">Passphrase</label>
+                <Input type="password" placeholder="Required for KuCoin/OKX" className="col-span-3 bg-black/50 border-white/10" value={configForm.passphrase} onChange={e => setConfigForm({...configForm, passphrase: e.target.value})} />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <label className="text-right text-xs text-muted-foreground">Pair</label>

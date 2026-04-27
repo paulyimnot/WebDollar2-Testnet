@@ -1,10 +1,12 @@
-import ccxt, { type Exchange } from 'ccxt';
+import * as ccxt from 'ccxt';
+import { type Exchange } from 'ccxt';
 import { EventEmitter } from 'events';
 
 export interface BotConfig {
   exchange: string;
   apiKey: string;
   secret: string;
+  passphrase?: string; // Some exchanges like KuCoin/OKX require this
   symbol: string; // e.g., 'BTC/USDT'
   amount: number; // Base amount to trade
   strategy: 'grid' | 'dca' | 'sniper' | 'market_maker';
@@ -38,24 +40,34 @@ class TradingBot extends EventEmitter {
 
   async configure(config: BotConfig) {
     try {
+      // 1. Sanitize inputs (Trimming whitespace is crucial for copy-pasted keys)
+      config.apiKey = config.apiKey.trim();
+      config.secret = config.secret.trim();
+      if (config.passphrase) config.passphrase = config.passphrase.trim();
+      
       this.config = config;
-      // Initialize ccxt client dynamically
+      
+      // 2. Initialize ccxt client dynamically
       const exchangeClass = (ccxt as any)[config.exchange];
       if (!exchangeClass) {
-        throw new Error(`Exchange ${config.exchange} is not supported by ccxt.`);
+        throw new Error(`Exchange '${config.exchange}' is not supported or misnamed in ccxt.`);
       }
 
       this.client = new exchangeClass({
         apiKey: config.apiKey,
         secret: config.secret,
+        password: config.passphrase, // ccxt uses 'password' for passphrase
         enableRateLimit: true,
       });
 
-      // Test connection by fetching balance or ticker
-      await this.client!.fetchTicker(config.symbol);
-      this.logSystem(`Connected to ${config.exchange} successfully. Pair: ${config.symbol}`);
+      // 3. Test connection by fetching balance (verifies API keys)
+      // fetchTicker is public and doesn't always prove the API keys are working.
+      await this.client!.fetchBalance();
+      
+      this.logSystem(`Connected to ${config.exchange} successfully. API Keys Verified.`);
       return true;
     } catch (error: any) {
+      console.error(`[BOT_CONFIG_ERROR]`, error);
       this.logSystem(`Configuration failed: ${error.message}`);
       return false;
     }

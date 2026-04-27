@@ -2630,7 +2630,7 @@ If you don't know something, say so honestly. Do not make up information. Keep a
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
     
     // In a real production environment, validate this deeply and store securely
-    const { exchange, apiKey, secret, symbol, amount, strategy, gridSpacingPercent } = req.body;
+    const { exchange, apiKey, secret, passphrase, symbol, amount, strategy, gridSpacingPercent } = req.body;
     
     // Lazy load the bot instance so ccxt is only imported if used
     const { botInstance } = await import("./botService.js");
@@ -2639,6 +2639,7 @@ If you don't know something, say so honestly. Do not make up information. Keep a
       exchange,
       apiKey,
       secret,
+      passphrase,
       symbol,
       amount,
       strategy,
