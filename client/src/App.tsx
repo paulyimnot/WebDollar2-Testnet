@@ -18,6 +18,7 @@ import Explorer from "@/pages/Explorer";
 import CardPage from "@/pages/Card";
 import Buy from "@/pages/Buy";
 import Admin from "@/pages/Admin";
+import Bot from "@/pages/Bot";
 import Whitepaper from "@/pages/Whitepaper";
 import Blackpaper from "@/pages/Blackpaper";
 import Faucet from "@/pages/Faucet";
@@ -94,6 +95,7 @@ function Router() {
           <Route path="/card" component={CardPage} />
           <Route path="/buy" component={Buy} />
           <Route path="/admin" component={Admin} />
+          <Route path="/bot" component={Bot} />
           <Route path="/whitepaper" component={Whitepaper} />
           <Route path="/blackpaper" component={Blackpaper} />
           <Route path="/how-it-works" component={HowItWorks} />

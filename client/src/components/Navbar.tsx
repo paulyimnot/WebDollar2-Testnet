@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Terminal, Cpu, RefreshCw, CreditCard, LogOut, Wallet, Menu, X, Coins, ShoppingCart, Shield, FileText, BookOpen, Rocket, Droplets, Activity } from "lucide-react";
+import { Terminal, Cpu, RefreshCw, CreditCard, LogOut, Wallet, Menu, X, Coins, ShoppingCart, Shield, FileText, BookOpen, Rocket, Droplets, Activity, Bot } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "./ui/button";
@@ -116,6 +116,7 @@ export function Navbar() {
                 <NavItem href="/miner" icon={Coins} className="py-4 text-base">Miner</NavItem>
                 <NavItem href="/conversion" icon={RefreshCw} className="py-4 text-base">Swap</NavItem>
                 <NavItem href="/card" icon={CreditCard} className="py-4 text-base">Card</NavItem>
+                <NavItem href="/bot" icon={Bot} className="py-4 text-base text-accent">Trading Bot</NavItem>
                 <NavItem href="/buy" icon={ShoppingCart} className="py-4 text-base">Buy</NavItem>
                 {user.isDev && <NavItem href="/admin" icon={Shield} className="py-4 text-base">Admin</NavItem>}
                 <div className="border-t border-primary/20 my-4 pt-4">

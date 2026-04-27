@@ -2624,6 +2624,69 @@ If you don't know something, say so honestly. Do not make up information. Keep a
     }
   });
 
+  // === Dielbs Trading Bot Routes ===
+  app.post("/api/bot/config", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    
+    // In a real production environment, validate this deeply and store securely
+    const { exchange, apiKey, secret, symbol, amount, strategy, gridSpacingPercent } = req.body;
+    
+    // Lazy load the bot instance so ccxt is only imported if used
+    const { botInstance } = await import("./botService.js");
+    
+    const success = await botInstance.configure({
+      exchange,
+      apiKey,
+      secret,
+      symbol,
+      amount,
+      strategy,
+      gridSpacingPercent
+    });
+    
+    if (success) {
+      res.json({ message: "Bot configured and connected successfully" });
+    } else {
+      res.status(400).json({ message: "Failed to connect to exchange. Check API keys and permissions." });
+    }
+  });
+
+  app.post("/api/bot/start", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { botInstance } = await import("./botService.js");
+      botInstance.start();
+      res.json({ message: "Bot started" });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/bot/stop", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { botInstance } = await import("./botService.js");
+      botInstance.stop();
+      res.json({ message: "Bot stopped" });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/bot/status", async (req, res) => {
+    // @ts-ignore
+    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { botInstance } = await import("./botService.js");
+      res.json(botInstance.getStatus());
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to get bot status" });
+    }
+  });
+
   // === Background Block Producer (DIELBS Engine) ===
   // Generates 1 native block every 5 seconds to match specification
   // 🌍 GEO-CLUSTER ARCHITECTURE: Only servers designated as Validator Nodes will produce blocks.
