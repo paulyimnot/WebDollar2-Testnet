@@ -32,7 +32,7 @@ export default function Addresses() {
   }
 
   const handleCreate = () => {
-    createAddress(undefined);
+    createAddress(undefined as any);
   };
 
   const handleReveal = async (id: number) => {

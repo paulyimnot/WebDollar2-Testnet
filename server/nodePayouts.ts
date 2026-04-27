@@ -42,31 +42,34 @@ async function processDailyNodePayouts() {
   const todayStart = new Date();
   todayStart.setUTCHours(0, 0, 0, 0);
 
-  const [existingPayouts] = await db.execute(sql`
+  const existingPayoutsResult = await db.execute(sql`
     SELECT COUNT(*) as count 
     FROM transactions 
     WHERE sender_address = 'NODE_TREASURY_POOL' 
     AND type = 'node_reward'
     AND timestamp >= ${todayStart.toISOString()}
   `);
+  const existingPayouts = existingPayoutsResult.rows[0] as any;
 
   if (Number(existingPayouts.count) > 0) {
     return; // Already paid out today
   }
 
   await db.transaction(async (tx) => {
-    const [lockResult] = await tx.execute(sql`SELECT pg_try_advisory_xact_lock(600613) as locked`);
+    const lockResultRaw = await tx.execute(sql`SELECT pg_try_advisory_xact_lock(600613) as locked`);
+    const lockResult = lockResultRaw.rows[0] as any;
     if (!lockResult.locked) {
        return;
     }
 
-    const [checkAgain] = await tx.execute(sql`
+    const checkAgainResult = await tx.execute(sql`
       SELECT COUNT(*) as count 
       FROM transactions 
       WHERE sender_address = 'NODE_TREASURY_POOL' 
       AND type = 'node_reward'
       AND timestamp >= ${todayStart.toISOString()}
     `);
+    const checkAgain = checkAgainResult.rows[0] as any;
     
     if (Number(checkAgain.count) > 0) {
       return;
@@ -77,18 +80,21 @@ async function processDailyNodePayouts() {
     // Sum all treasury inflows. Scoped to last 90 days for query performance.
     // The treasury never carries balances older than this since it pays out daily.
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-    const [inResult] = await tx.execute(sql`
+    const inResultRaw = await tx.execute(sql`
       SELECT COALESCE(SUM(amount::numeric), 0) as total_in 
       FROM transactions 
       WHERE receiver_address = 'NODE_TREASURY_POOL'
       AND timestamp >= ${ninetyDaysAgo}
     `);
-    const [outResult] = await tx.execute(sql`
+    const inResult = inResultRaw.rows[0] as any;
+    
+    const outResultRaw = await tx.execute(sql`
       SELECT COALESCE(SUM(amount::numeric), 0) as total_out 
       FROM transactions 
       WHERE sender_address = 'NODE_TREASURY_POOL'
       AND timestamp >= ${ninetyDaysAgo}
     `);
+    const outResult = outResultRaw.rows[0] as any;
 
     const totalTreasuryBalance = parseFloat(inResult.total_in) - parseFloat(outResult.total_out);
 

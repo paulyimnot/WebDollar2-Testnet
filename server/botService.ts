@@ -1,4 +1,4 @@
-import ccxt from 'ccxt';
+import ccxt, { type Exchange } from 'ccxt';
 import { EventEmitter } from 'events';
 
 export interface BotConfig {
@@ -21,7 +21,7 @@ export interface TradeLog {
 }
 
 class TradingBot extends EventEmitter {
-  private client: ccxt.Exchange | null = null;
+  private client: Exchange | null = null;
   private config: BotConfig | null = null;
   private isActive: boolean = false;
   private logs: TradeLog[] = [];
@@ -71,11 +71,11 @@ class TradingBot extends EventEmitter {
     this.logSystem(`Bot Started - Strategy: ${this.config.strategy}`);
     
     // Initial fetch to set baseline price
-    this.client.fetchTicker(this.config.symbol).then(ticker => {
+    this.client.fetchTicker(this.config.symbol).then((ticker: any) => {
       this.lastPrice = ticker.last || 0;
       this.lastTradePrice = ticker.last || 0;
       this.runLoop();
-    }).catch(err => this.logSystem(`Failed to fetch initial price: ${err.message}`));
+    }).catch((err: any) => this.logSystem(`Failed to fetch initial price: ${err.message}`));
   }
 
   stop() {
@@ -157,8 +157,13 @@ class TradingBot extends EventEmitter {
 
       // 2. Fetch order book to find the exact spread
       const orderBook = await this.client.fetchOrderBook(this.config.symbol, 5);
-      const bestBid = orderBook.bids[0][0]; // Highest someone is willing to buy
-      const bestAsk = orderBook.asks[0][0]; // Lowest someone is willing to sell
+      const bestBid = orderBook.bids[0]?.[0]; // Highest someone is willing to buy
+      const bestAsk = orderBook.asks[0]?.[0]; // Lowest someone is willing to sell
+      
+      if (!bestBid || !bestAsk) {
+        this.logSystem(`Failed to fetch spread from orderbook.`);
+        return;
+      }
       
       // Calculate our custom spread logic (e.g., provide liquidity slightly better than the market to ensure fills, or right on the edge)
       const myBidPrice = bestBid * 0.9995; // 0.05% below best bid
@@ -197,7 +202,7 @@ class TradingBot extends EventEmitter {
         type: side,
         price: order.price || price,
         amount: order.amount || this.config.amount,
-        status: order.status
+        status: String(order.status || 'unknown')
       };
       
       this.logs.unshift(logEntry);

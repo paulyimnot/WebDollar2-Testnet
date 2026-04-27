@@ -25,15 +25,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 interface TradeLog {
   id: string;
@@ -426,69 +418,71 @@ export default function Bot() {
       </div>
 
       {/* CONFIGURATION MODAL */}
-      <Dialog open={showConfigModal} onOpenChange={setShowConfigModal}>
-        <DialogContent className="sm:max-w-[500px] bg-background border-primary/20">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black font-heading text-accent flex items-center gap-2">
-              <Settings className="w-5 h-5" /> EXCHANGE CONFIGURATION
-            </DialogTitle>
-            <DialogDescription className="font-mono text-xs">
-              Connect the Dielbs Bot to a real exchange (Binance, KuCoin, etc.) using CCXT.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4 font-mono text-sm">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Exchange</Label>
-              <Select value={configForm.exchange} onValueChange={(v) => setConfigForm({...configForm, exchange: v})}>
-                <SelectTrigger className="col-span-3 bg-black/50 border-white/10">
-                  <SelectValue placeholder="Select Exchange" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="binance">Binance</SelectItem>
-                  <SelectItem value="kucoin">KuCoin</SelectItem>
-                  <SelectItem value="kraken">Kraken</SelectItem>
-                  <SelectItem value="coinbase">Coinbase</SelectItem>
-                </SelectContent>
-              </Select>
+      {showConfigModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-background border border-primary/20 p-6 rounded-lg shadow-xl w-full max-w-[500px]">
+            <div className="mb-6">
+              <h2 className="text-2xl font-black font-heading text-accent flex items-center gap-2 mb-2">
+                <Settings className="w-5 h-5" /> EXCHANGE CONFIGURATION
+              </h2>
+              <p className="font-mono text-xs text-muted-foreground">
+                Connect the Dielbs Bot to a real exchange (Binance, KuCoin, etc.) using CCXT.
+              </p>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-xs">API Key</Label>
-              <Input className="col-span-3 bg-black/50 border-white/10" value={configForm.apiKey} onChange={e => setConfigForm({...configForm, apiKey: e.target.value})} />
+            
+            <div className="grid gap-4 py-4 font-mono text-sm">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-muted-foreground">Exchange</label>
+                <select 
+                  className="col-span-3 bg-black/50 border border-white/10 rounded-md p-2 text-white outline-none focus:border-primary/50" 
+                  value={configForm.exchange} 
+                  onChange={(e: any) => setConfigForm({...configForm, exchange: e.target.value})}
+                >
+                  <option value="binance">Binance</option>
+                  <option value="kucoin">KuCoin</option>
+                  <option value="kraken">Kraken</option>
+                  <option value="coinbase">Coinbase</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-xs text-muted-foreground">API Key</label>
+                <Input className="col-span-3 bg-black/50 border-white/10" value={configForm.apiKey} onChange={e => setConfigForm({...configForm, apiKey: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-xs text-muted-foreground">API Secret</label>
+                <Input type="password" className="col-span-3 bg-black/50 border-white/10" value={configForm.secret} onChange={e => setConfigForm({...configForm, secret: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-xs text-muted-foreground">Pair</label>
+                <Input className="col-span-3 bg-black/50 border-white/10" placeholder="BTC/USDT" value={configForm.symbol} onChange={e => setConfigForm({...configForm, symbol: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-xs text-muted-foreground">Base Amount</label>
+                <Input type="number" className="col-span-3 bg-black/50 border-white/10" value={configForm.amount} onChange={e => setConfigForm({...configForm, amount: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-xs text-muted-foreground">Strategy</label>
+                <select 
+                  className="col-span-3 bg-black/50 border border-white/10 rounded-md p-2 text-white outline-none focus:border-primary/50" 
+                  value={configForm.strategy} 
+                  onChange={(e: any) => setConfigForm({...configForm, strategy: e.target.value})}
+                >
+                  <option value="grid">Grid Trading (Beginner)</option>
+                  <option value="dca">DCA (Accumulation)</option>
+                  <option value="market_maker">High-Freq Market Maker</option>
+                </select>
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-xs">API Secret</Label>
-              <Input type="password" className="col-span-3 bg-black/50 border-white/10" value={configForm.secret} onChange={e => setConfigForm({...configForm, secret: e.target.value})} />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-xs">Pair</Label>
-              <Input className="col-span-3 bg-black/50 border-white/10" placeholder="BTC/USDT" value={configForm.symbol} onChange={e => setConfigForm({...configForm, symbol: e.target.value})} />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-xs">Base Amount</Label>
-              <Input type="number" className="col-span-3 bg-black/50 border-white/10" value={configForm.amount} onChange={e => setConfigForm({...configForm, amount: e.target.value})} />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-xs">Strategy</Label>
-              <Select value={configForm.strategy} onValueChange={(v) => setConfigForm({...configForm, strategy: v})}>
-                <SelectTrigger className="col-span-3 bg-black/50 border-white/10">
-                  <SelectValue placeholder="Strategy" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="grid">Grid Trading (Beginner)</SelectItem>
-                  <SelectItem value="dca">DCA (Accumulation)</SelectItem>
-                  <SelectItem value="market_maker">High-Freq Market Maker</SelectItem>
-                </SelectContent>
-              </Select>
+            
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setShowConfigModal(false)}>Cancel</Button>
+              <Button className="btn-gold" onClick={() => configMutation.mutate(configForm)} disabled={configMutation.isPending}>
+                {configMutation.isPending ? "Connecting..." : "Save & Connect"}
+              </Button>
             </div>
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setShowConfigModal(false)}>Cancel</Button>
-            <Button className="btn-gold" onClick={() => configMutation.mutate(configForm)} disabled={configMutation.isPending}>
-              {configMutation.isPending ? "Connecting..." : "Save & Connect"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }

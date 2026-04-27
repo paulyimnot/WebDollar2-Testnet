@@ -11,7 +11,7 @@ import { createHash } from "crypto";
 import { checkConnection, getContractAddress, getOnChainBalance, getMaticBalance, getPolygonscanBaseUrl, getRecentBlocks, getRecentTransactionsFromBlock } from "./blockchain.js";
 import { db } from "./db.js";
 import { sql, eq, and, gt, or } from "drizzle-orm";
-import { users, transactions, walletAddresses, blockedWallets, blocks } from "../shared/schema.js";
+import { users, transactions, walletAddresses, blockedWallets, blocks, type Block } from "../shared/schema.js";
 import * as OTPAuth from "otpauth";
 import QRCode from "qrcode";
 import OpenAI from "openai";
@@ -155,7 +155,7 @@ export async function registerRoutes(
     if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
     try {
       const { isBackbone } = req.body;
-      const user = await storage.updateUser(req.session.userId, {
+      const user = await storage.updateUser((req.session as any).userId, {
         lastActive: new Date(),
         isBackbone: !!isBackbone
       });
@@ -237,7 +237,7 @@ export async function registerRoutes(
       if (ip !== "unknown_ip") {
         await db.execute(sql`INSERT INTO registration_ip_log (ip) VALUES (${ip}) ON CONFLICT DO NOTHING`);
       }
-      req.session.userId = user.id;
+      (req.session as any).userId = user.id;
       // Record session for single-device enforcement
       await storage.updateUser(user.id, { currentSessionId: req.sessionID });
       const { password: _, ...safeUser } = user;
@@ -1079,7 +1079,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Mining proof required. Please enable your browser miner to claim." });
       }
 
-      const hash = createHash("sha256").update(String(req.session.userId) + challenge + nonce).digest("hex");
+      const hash = createHash("sha256").update(String((req.session as any).userId) + challenge + nonce).digest("hex");
       if (!hash.startsWith("000")) {
         return res.status(400).json({ message: "Invalid mining proof. CPU effort verification failed." });
       }
