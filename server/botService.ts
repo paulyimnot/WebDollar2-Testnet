@@ -7,7 +7,7 @@ export interface BotConfig {
   secret: string;
   symbol: string; // e.g., 'BTC/USDT'
   amount: number; // Base amount to trade
-  strategy: 'grid' | 'dca' | 'sniper';
+  strategy: 'grid' | 'dca' | 'sniper' | 'market_maker';
   gridSpacingPercent?: number; // For grid strategy
 }
 
@@ -27,9 +27,10 @@ class TradingBot extends EventEmitter {
   private logs: TradeLog[] = [];
   private loopInterval: NodeJS.Timeout | null = null;
 
-  // State for simple grid
+  // State for simple grid / market maker
   private lastPrice: number = 0;
   private lastTradePrice: number = 0;
+  private activeMakerOrders: { id: string, side: string }[] = [];
 
   constructor() {
     super();
@@ -108,6 +109,8 @@ class TradingBot extends EventEmitter {
 
       if (this.config.strategy === 'grid') {
         await this.executeGridLogic();
+      } else if (this.config.strategy === 'market_maker') {
+        await this.executeMarketMakerLogic();
       } else if (this.config.strategy === 'dca') {
          // simple dca placeholder
       }
@@ -130,23 +133,63 @@ class TradingBot extends EventEmitter {
 
     // Check if price moved up enough to sell
     if (currentPrice >= this.lastTradePrice * (1 + spacing)) {
-      await this.placeOrder('SELL', currentPrice);
+      await this.placeOrder('SELL', currentPrice, 'market');
       this.lastTradePrice = currentPrice;
     } 
     // Check if price moved down enough to buy
     else if (currentPrice <= this.lastTradePrice * (1 - spacing)) {
-      await this.placeOrder('BUY', currentPrice);
+      await this.placeOrder('BUY', currentPrice, 'market');
       this.lastTradePrice = currentPrice;
     }
   }
 
-  private async placeOrder(side: 'BUY' | 'SELL', price: number) {
+  private async executeMarketMakerLogic() {
     if (!this.client || !this.config) return;
+
+    try {
+      // 1. Cancel previous unfilled maker orders (to avoid getting run over)
+      for (const order of this.activeMakerOrders) {
+        try {
+          await this.client.cancelOrder(order.id, this.config.symbol);
+        } catch (e) { /* Ignore already filled/canceled */ }
+      }
+      this.activeMakerOrders = [];
+
+      // 2. Fetch order book to find the exact spread
+      const orderBook = await this.client.fetchOrderBook(this.config.symbol, 5);
+      const bestBid = orderBook.bids[0][0]; // Highest someone is willing to buy
+      const bestAsk = orderBook.asks[0][0]; // Lowest someone is willing to sell
+      
+      // Calculate our custom spread logic (e.g., provide liquidity slightly better than the market to ensure fills, or right on the edge)
+      const myBidPrice = bestBid * 0.9995; // 0.05% below best bid
+      const myAskPrice = bestAsk * 1.0005; // 0.05% above best ask
+
+      // 3. Place Maker Limit Orders
+      this.logSystem(`Market Making: Placing spread orders. Bid: ${myBidPrice}, Ask: ${myAskPrice}`);
+      
+      const bidOrder = await this.placeOrder('BUY', myBidPrice, 'limit');
+      const askOrder = await this.placeOrder('SELL', myAskPrice, 'limit');
+
+      if (bidOrder) this.activeMakerOrders.push({ id: bidOrder.id, side: 'BUY' });
+      if (askOrder) this.activeMakerOrders.push({ id: askOrder.id, side: 'SELL' });
+
+    } catch (error: any) {
+      this.logSystem(`Market Maker error: ${error.message}`);
+    }
+  }
+
+  private async placeOrder(side: 'BUY' | 'SELL', price: number, type: 'market' | 'limit' = 'market') {
+    if (!this.client || !this.config) return null;
     
     try {
-      this.logSystem(`Attempting to place ${side} order for ${this.config.amount} at ${price}`);
+      this.logSystem(`Attempting to place ${type} ${side} order for ${this.config.amount} at ${price}`);
       
-      const order = await this.client.createMarketOrder(this.config.symbol, side.toLowerCase() as any, this.config.amount);
+      let order;
+      if (type === 'market') {
+        order = await this.client.createMarketOrder(this.config.symbol, side.toLowerCase() as any, this.config.amount);
+      } else {
+        order = await this.client.createLimitOrder(this.config.symbol, side.toLowerCase() as any, this.config.amount, price);
+      }
       
       const logEntry: TradeLog = {
         id: order.id,
@@ -161,9 +204,11 @@ class TradingBot extends EventEmitter {
       if (this.logs.length > 100) this.logs.pop(); // keep last 100
       
       this.emit('trade', logEntry);
+      return order;
       
     } catch (error: any) {
       this.logSystem(`Order failed: ${error.message}`);
+      return null;
     }
   }
 

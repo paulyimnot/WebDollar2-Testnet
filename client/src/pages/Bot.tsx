@@ -476,6 +476,7 @@ export default function Bot() {
                 <SelectContent>
                   <SelectItem value="grid">Grid Trading (Beginner)</SelectItem>
                   <SelectItem value="dca">DCA (Accumulation)</SelectItem>
+                  <SelectItem value="market_maker">High-Freq Market Maker</SelectItem>
                 </SelectContent>
               </Select>
             </div>
